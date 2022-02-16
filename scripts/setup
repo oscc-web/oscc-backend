@@ -1,0 +1,14 @@
+#/bin/bash
+
+# Add NodeJS official apt source
+curl -fsSL https://deb.nodesource.com/setup_17.x | sudo -E bash -
+
+# Install NodeJS
+sudo apt-get install -y nodejs
+
+# Install NPM China mirror (cnpm)
+sudo npm install -g cnpm --registry=https://registry.npmmirror.com
+
+# Install node dependencies according to package.json
+cnpm install
+

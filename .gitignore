@@ -1,0 +1,10 @@
+# Editor settings
+.vscode
+# NPM packages
+node_modules
+# Configurations
+config.js
+config.json
+# Package lock
+package-lock.json
+
