@@ -4,7 +4,17 @@
 
   + Install dependencies
 
+  ```sh
+  npm install
+  ```
+
   + Config
+
+  ```sh
+  # Generate config.js from default configs
+  node . --init
+  # 
+  ```
 
   + Deamonize
 

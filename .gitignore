@@ -7,4 +7,6 @@ config.js
 config.json
 # Package lock
 package-lock.json
-
+# Runtime generated data
+var
+tmp

@@ -1,0 +1,50 @@
+{
+  "dependencies": {
+    "colors": "^1.4.0",
+    "eslint": "^8.9.0",
+    "eslint-plugin-spellcheck": "^0.0.19",
+    "express": "^4.17.2",
+    "husky": "^7.0.4",
+    "lint-staged": "^12.3.4",
+    "moment": "^2.29.1",
+    "moment-timezone": "^0.5.34",
+    "vhost": "^3.0.2",
+    "winston": "^3.6.0",
+    "winston-mongodb": "^5.0.7"
+  },
+  "name": "ysyx-backend-services",
+  "description": "YSYX backend services",
+  "version": "0.0.0",
+  "main": "index.js",
+  "type": "module",
+  "directories": {
+    "lib": "lib",
+    "router": "router",
+    "modules": "modules",
+    "scripts": "scripts"
+  },
+  "scripts": {
+    "test": "./scrpits/stop; ./scripts/start --debug; ./scripts/log"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/ysyx-org/backend-services.git"
+  },
+  "author": "Yuxuan Zhang",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/ysyx-org/backend-services/issues"
+  },
+  "homepage": "https://docs.ysyx.org/private/web/backend-services",
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "**/*.js": [
+      "eslint --fix",
+      "git add"
+    ]
+  }
+}
