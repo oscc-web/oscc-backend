@@ -41,11 +41,8 @@ module.exports = {
 				'templates': false,
 				'lang': 'en_US',
 				'skipWords': [
-					'req',
-					'res',
 					'utils',
-					'dists',
-					'acc'
+					'dists'
 				],
 				'skipIfMatch': [
 					'http://[^s]*',
@@ -56,7 +53,7 @@ module.exports = {
 					'ysyx',
 					'vhost'
 				],
-				'minLength': 3
+				'minLength': 4
 			}
 		]
 	}
