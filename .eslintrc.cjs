@@ -45,7 +45,8 @@ module.exports = {
 					'res',
 					'utils',
 					'dists',
-					'acc'
+					'acc',
+					'mongodb'
 				],
 				'skipIfMatch': [
 					'http://[^s]*',

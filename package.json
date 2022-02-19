@@ -6,8 +6,10 @@
     "express": "^4.17.2",
     "husky": "^7.0.4",
     "lint-staged": "^12.3.4",
+    "lodash": "^4.17.21",
     "moment": "^2.29.1",
     "moment-timezone": "^0.5.34",
+    "mongodb": "^4.4.0",
     "vhost": "^3.0.2",
     "winston": "^3.6.0",
     "winston-mongodb": "^5.0.7"
