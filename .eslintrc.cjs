@@ -42,7 +42,8 @@ module.exports = {
 				'lang': 'en_US',
 				'skipWords': [
 					'utils',
-					'dists'
+					'dists',
+					'mongodb'
 				],
 				'skipIfMatch': [
 					'http://[^s]*',

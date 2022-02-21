@@ -68,6 +68,10 @@ At runtime, the available options of privileges are inducted from a special grou
 
 	Controls privileged access (readonly) to `docs.ysyx.[org|cc|dev]/private/`
 
++ `access-forms:submit` Boolean, default false
+
+	Controls whether a user can submit forms
+
 + `access-forms:read` Boolean, default false
 
 	Controls read access to forms
@@ -75,10 +79,6 @@ At runtime, the available options of privileges are inducted from a special grou
 + `access-forms:comment` Boolean, default false
 
 	Controls comment access to forms
-
-+ `access-forms:submit` Boolean, default false
-
-	Controls whether a user can submit forms
 
 + `access-forms:finalize` Boolean, default false
 
