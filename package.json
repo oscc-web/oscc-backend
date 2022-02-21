@@ -8,6 +8,8 @@
     "lint-staged": "^12.3.4",
     "moment": "^2.29.1",
     "moment-timezone": "^0.5.34",
+    "nodemailer": "^6.7.2",
+    "sodajs": "^0.4.10",
     "vhost": "^3.0.2",
     "winston": "^3.6.0",
     "winston-mongodb": "^5.0.7"

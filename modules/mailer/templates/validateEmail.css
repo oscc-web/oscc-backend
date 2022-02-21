@@ -1,0 +1,42 @@
+* {
+    margin: 0.2rem;
+}
+.mail-body,
+.mail-body div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.mail-body > * {
+    max-width: 600px;
+}
+
+.flex span {
+    display: block;
+    margin: 0.5rem;
+}
+
+.next-level {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.button {
+    background-color: hsl(212, 91%, 30%);
+    border-radius: 3px;
+    text-decoration: none;
+    color: white;
+    padding: 8px 12px;
+    transition: .1s ease-out;
+}
+
+.button:hover,
+.button:active {
+    text-decoration: underline;
+}
+
+.button:active {
+    filter: brightness(130%);
+}

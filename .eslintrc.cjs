@@ -47,11 +47,13 @@ module.exports = {
 				'skipIfMatch': [
 					'http://[^s]*',
 					'^[-\\w]+\\/[-\\w\\.]+$',
-					'^(\\w+-)+\\w+$$'
+					'^(\\w+-)+\\w+$$',
+					'\\.[cm]?js$',
 				],
 				'skipWordIfMatch': [
 					'ysyx',
-					'vhost'
+					'vhost',
+					'nodemailer'
 				],
 				'minLength': 4
 			}
