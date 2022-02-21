@@ -9,7 +9,7 @@ init(import.meta)
 const SMTP = config.mailer
 // create nodemailer transport
 const transport = nodemailer.createTransport(SMTP)
-logger.info('mailer server is setting up')
+logger.info('Starting Mailer')
 http.createServer((req, res) => {
 	const body = []
 	if (req.method !== 'POST') {
@@ -37,6 +37,7 @@ http.createServer((req, res) => {
 				fs.writeFileSync(`${PROJECT_ROOT}/var/log/mailer/${template}.out.html`, html)
 				transport.sendMail({
 					from: SMTP.auth.user,
+					sender: SMTP.sender || 'Mail bot',
 					to,
 					subject,
 					html
@@ -45,7 +46,9 @@ http.createServer((req, res) => {
 					.catch(e => logger.warn('Failed to send mail: ' + e.stack))
 			})
 	}
-}).listen(config.port.mailer)
+}).listen(config.port.mailer, () => {
+	logger.info(`Mailer up and running at port ${config.port.mailer}`)
+})
 
 function render(templateName, args) {
 	const

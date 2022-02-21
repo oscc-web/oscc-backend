@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+
+<head>
+	<style>
+		* {
+			border: none;
+			outline: none !important;
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+		}
+
+		iframe {
+			position: absolute;
+			width: 100%;
+			height: 100%;
+			overflow: scroll;
+		}
+
+		#overlay {
+			position: absolute;
+			left: 20px;
+			bottom: 20px;
+			background-color: #FFFA;
+			box-shadow: -4px 4px 20px 8px #0005;
+			border-radius: 10px;
+			flex-direction: column;
+			font-size: 16px;
+		}
+
+		#overlay,
+		#overlay>* {
+			display: flex;
+			margin: 10px;
+			align-items: center;
+		}
+
+		#overlay>* * {
+			flex-grow: 1;
+			margin: 5px;
+			padding: 0.5em 1em;
+		}
+
+		#overlay>* {
+			flex-direction: row;
+		}
+
+		input {
+			background-color: #dfeA;
+			border-bottom: 2px solid rgb(67, 94, 128);
+			font-size: inherit;
+			flex-grow: 1;
+		}
+
+		button {
+			border-radius: 8px;
+			background: linear-gradient(hsl(210, 60%, 60%), hsl(210, 50%, 40%));
+			color: white;
+		}
+
+		button:hover {
+			filter: brightness(120%)
+		}
+
+		button:active {
+			filter: brightness(110%)
+		}
+	</style>
+	<script src="https://unpkg.com/sodajs@0.4.10/dist/soda.js"></script>
+</head>
+
+<body>
+	<iframe id="tester"></iframe>
+	<div id="overlay">
+		<span>
+			<input id="name" value="validateEmail">
+			<button onclick="load(document.getElementById('name').value, args)">Load</button>
+		</span>
+		<textarea id="args" oninput="try_parse(document.getElementById('args').value)"
+			style="resize: vertical; width: 100%; padding: 0 20px; min-height: 5em;"
+			placeholder='{"argument": "value"}'></textarea>
+	</div>
+	<script>
+		let tpl = 'validateEmail',
+			args = {}
+		function try_parse(str) {
+			try {
+				args = JSON.parse(str)
+			} catch (e) { }
+		}
+		async function load(template = tpl, args) {
+			let
+				html = await fetch('./index.html')
+					.then(res => res.ok ? res.text() : ''),
+				indexCss = await fetch('./index.css')
+					.then(res => res.ok ? res.text() : ''),
+				templateHtml = await fetch(`./${template}.html`)
+					.then(res => res.ok ? res.text() : '')
+					.then(text => text.replace(
+						/^-{3,}\n(?<content>(.*\n)*?)-{3,}/m,
+						(...args) => {
+							let groups = args.pop()
+							subject = groups?.content || '来自一生一芯的邮件'
+							return ''
+						}
+					)),
+				templateCss = await fetch(`./${template}.css`)
+					.then(res => res.ok ? res.text() : ''),
+				src = html.replace(
+					/\{\{\s*(?<entry>\w+)\s*\}\}/g,
+					(...arg) => {
+						let { entry } = arg.pop()
+						return { templateCss, indexCss, html: soda(templateHtml, args) }[entry]
+					}
+				)
+			document.getElementById('tester').src =
+				'data:text/html;charset=utf-8,' + encodeURIComponent(src)
+			console.log(src)
+		}
+	</script>
+</body>
