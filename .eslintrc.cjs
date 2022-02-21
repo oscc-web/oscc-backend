@@ -41,23 +41,22 @@ module.exports = {
 				'templates': false,
 				'lang': 'en_US',
 				'skipWords': [
-					'req',
-					'res',
 					'utils',
 					'dists',
-					'acc',
 					'mongodb'
 				],
 				'skipIfMatch': [
 					'http://[^s]*',
 					'^[-\\w]+\\/[-\\w\\.]+$',
-					'^(\\w+-)+\\w+$$'
+					'^(\\w+-)+\\w+$$',
+					'\\.[cm]?js$',
 				],
 				'skipWordIfMatch': [
 					'ysyx',
-					'vhost'
+					'vhost',
+					'nodemailer'
 				],
-				'minLength': 3
+				'minLength': 4
 			}
 		]
 	}
