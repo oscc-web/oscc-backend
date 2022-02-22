@@ -43,13 +43,16 @@ module.exports = {
 				'skipWords': [
 					'utils',
 					'dists',
-					'mongodb'
+					'mongodb',
+					'wildcard',
 				],
 				'skipIfMatch': [
 					'http://[^s]*',
 					'^[-\\w]+\\/[-\\w\\.]+$',
 					'^(\\w+-)+\\w+$$',
 					'\\.[cm]?js$',
+					'getters?',
+					'setters?',
 				],
 				'skipWordIfMatch': [
 					'ysyx',
