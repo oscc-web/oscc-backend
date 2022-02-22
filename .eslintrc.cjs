@@ -56,7 +56,7 @@ module.exports = {
 					'vhost',
 					'nodemailer'
 				],
-				'minLength': 4
+				'minLength': 5
 			}
 		]
 	}
