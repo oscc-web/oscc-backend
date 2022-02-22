@@ -90,4 +90,4 @@ express()
 		else res.type('txt').send('404 Not found')
 	})
 	// Open listening port
-	.listen(port, () => logger.info(`service up and running at port ${port}`))
+	.listen(port, () => logger.info(`Service up and running at port ${port}`))
