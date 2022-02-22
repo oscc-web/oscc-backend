@@ -1,20 +1,20 @@
 import http from 'http'
 import nodemailer from 'nodemailer'
 import fs from 'fs'
+import soda from 'sodajs/dist/soda.node.js'
 // Environmental setup
 import { init, logger, config, PROJECT_ROOT } from '../../lib/env.js'
-import soda from 'sodajs/dist/soda.node.js'
 init(import.meta)
 
 const SMTP = config.mailer
 // create nodemailer transport
 const transport = nodemailer.createTransport(SMTP)
-logger.info('Starting Mailer')
+logger.info(`Starting Mailer as <${SMTP.auth.user}>`)
 http.createServer((req, res) => {
 	const body = []
 	if (req.method !== 'POST') {
 		logger.warn(`Rejected ${req.method} request from ${req.origin}`)
-		res.writeHead(404).end()		
+		res.writeHead(404).end()
 	} else {
 		req
 			.on('data', chunk => body.push(chunk))
@@ -43,6 +43,7 @@ http.createServer((req, res) => {
 					html
 				})
 					.then(() => res.writeHead(200).end())
+					.then(() => logger.info(`Mail "${subject}" sent to ${to} with args ${JSON.stringify(args)}`))
 					.catch(e => logger.warn('Failed to send mail: ' + e.stack))
 			})
 	}
@@ -68,7 +69,7 @@ function render(templateName, args) {
 					/^-{3,}\n(?<content>(.*\n)*?)-{3,}/m,
 					(...args) => {
 						let groups = args.pop()
-						subject = groups?.content || '来自一生一芯的邮件'
+						subject = groups?.content.trim() || '来自一生一芯的邮件'
 						return ''
 					}
 				),
