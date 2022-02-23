@@ -13,7 +13,6 @@
     "moment": "^2.29.1",
     "moment-timezone": "^0.5.34",
     "mongodb": "^4.4.0",
-    "node-fetch": "^3.2.0",
     "nodemailer": "^6.7.2",
     "sodajs": "^0.4.10",
     "vhost": "^3.0.2",
