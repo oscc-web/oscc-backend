@@ -15,12 +15,12 @@ let db = await dbInit('fileSystem/crud')
 logger.info('Staring fileSystem server')
 http.createServer((req, res) => {
 	// reject user not logged in
-	if (!req?.internalCookie?.user_info) {
-		console.log(req?.internalCookie)
+	if (!req?.internalCookies?.user_info) {
+		console.log(req?.internalCookies)
 		return logger.warn(`Rejected user not logged in from ${req?.origin}`) && res.writeHead(403).end()
 	}
 	let params = new URLSearchParams(req.url.split('?')[1]),
-		user = JSON.parse(req.internalCookie.user_info),
+		user = JSON.parse(req.internalCookies.user_info),
 		filePurpose = params.get('for')
 	if (req.method === 'POST') {
 		logger.access(`${req.method} ${req.headers.host}${req.url} from ${req.origin}`)

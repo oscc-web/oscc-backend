@@ -35,7 +35,7 @@ try {
 			Session.preprocessor,
 			async (req, res) => {
 				// Log internal cookies injected by Session preprocessor
-				console.log(('internalCookie: ' + JSON.stringify(req.internalCookie)).blue)
+				console.log(('internalCookies: ' + JSON.stringify(req.internalCookies)).blue)
 				// End request
 				res.writeHead(200).end()
 				// Retract session result
@@ -44,7 +44,7 @@ try {
 					server.close()
 					resolve(result)
 				} else {
-					console.log(`No matched session: ${JSON.stringify(req.parsedCookie)}`.red.underline)
+					console.log(`No matched session: ${JSON.stringify(req.parsedCookies)}`.red.underline)
 				}
 			}
 		).listen(8888, () => {
