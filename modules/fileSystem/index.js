@@ -16,7 +16,6 @@ logger.info('Staring fileSystem server')
 http.createServer((req, res) => {
 	// reject user not logged in
 	if (!req?.internalCookies?.user_info) {
-		console.log(req?.internalCookies)
 		return logger.warn(`Rejected user not logged in from ${req?.origin}`) && res.writeHead(403).end()
 	}
 	let params = new URLSearchParams(req.url.split('?')[1]),
@@ -30,7 +29,7 @@ http.createServer((req, res) => {
 				uploadDir: tempPath
 			},
 			form = new formidable.IncomingForm(options)
-		form.parse(req, async function (err, fields, files) {
+		form.parse(req, async (err, fields, files) => {
 			if (err) {
 				logger.warn('save file error:', err.stack)
 				res.writeHead(500).end('save file error')
