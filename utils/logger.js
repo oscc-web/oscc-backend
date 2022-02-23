@@ -3,7 +3,7 @@ import moment from 'moment'
 import 'moment-timezone'
 import { createLogger, format, transports, addColors } from 'winston'
 import 'winston-mongodb'
-import { PROJECT_ROOT, config } from './env.js'
+import { PROJECT_ROOT, config } from '../lib/env.js'
 let levels = [
 	['error', 'red'],
 	['warn', 'yellow'],
