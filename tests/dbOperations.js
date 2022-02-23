@@ -32,7 +32,3 @@ console.log(JSON.stringify((await db.test.find({ _id: id }).toArray()), null, 2)
 console.log('Test: then, delete this entry'.green)
 console.log(JSON.stringify((await db.test.delete({ _id: id })), null, 2).blue)
 console.log(JSON.stringify((await db.test.find({ _id: id }).toArray()), null, 2).dim)
-// Test: empty collection name
-// console.log('Test: empty collection name'.green)
-// db = await dbInit('')
-// console.log(JSON.stringify(db[''], null, 2).blue)
