@@ -1,6 +1,6 @@
 import Session from '../lib/session.js'
 import User from '../lib/user.js'
-import DBInit from '../lib/mongo.js'
+import DBInit from '../utils/mongo.js'
 import { init } from '../lib/env.js'
 import express from 'express'
 import 'colors'
@@ -34,6 +34,8 @@ try {
 		let server = express().use(
 			Session.preprocessor,
 			async (req, res) => {
+				// Log internal cookies injected by Session preprocessor
+				console.log(('internalCookie: ' + JSON.stringify(req.internalCookie)).blue)
 				// End request
 				res.writeHead(200).end()
 				// Retract session result

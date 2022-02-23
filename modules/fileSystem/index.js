@@ -10,7 +10,7 @@ init(import.meta)
 const tempPath = `${PROJECT_ROOT}/tmp`
 // const storagePath = `${PROJECT_ROOT}/storage`
 // database init
-import dbInit from '../../lib/mongo.js'
+import dbInit from '../../utils/mongo.js'
 let db = await dbInit('fileSystem/crud')
 logger.info('Staring fileSystem server')
 http.createServer((req, res) => {

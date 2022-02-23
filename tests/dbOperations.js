@@ -1,5 +1,5 @@
 // Test actions
-import dbInit from '../lib/mongo.js'
+import dbInit from '../utils/mongo.js'
 import 'colors'
 let db = await dbInit('test/cr')
 let id = Date.now().toString(36)
