@@ -41,7 +41,7 @@ fetch(
 	console.log(e.message.red)
 })
 await new Promise(res => setTimeout(() => res(), TIME_OUT))
-requestOptions.method = "GET"
+requestOptions.method = 'GET'
 requestOptions.body = null
 console.log('Test: fetch mailer response code is 404, returns as expected'.green)
 fetch(
