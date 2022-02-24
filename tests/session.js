@@ -1,10 +1,8 @@
+import Test from './Test.js'
 import Session from '../lib/session.js'
 import User from '../lib/user.js'
 import DBInit from '../utils/mongo.js'
-import { init } from '../lib/env.js'
 import express from 'express'
-import 'colors'
-init(import.meta)
 const TIME_OUT = 500
 // Generate parameters for test purpose
 let userID = Date.now().toString(36),
@@ -12,25 +10,30 @@ let userID = Date.now().toString(36),
 	mail = 'demo@ysyx.org',
 	OAuthTokens = {},
 	groups = [],
-	token
-console.log('Creating test user'.green)
-let user = new User({
-	_id: userID, name, mail, OAuthTokens, groups
+	token,
+	/**
+	 * @type {Session}
+	 */
+	session,
+	/**
+	 * @type {User}
+	 */
+	user
+new Test('create a temporary for session test').$(async () => {
+	user = new User({
+		_id: userID, name, mail, OAuthTokens, groups
+	})
+	// We are skipping password because we do not need to run user.login()
+	await user.update()
+	return {userID: user.userID, info: user.info}
 })
-user.password = '123321'
-await new Promise(res => setTimeout(() => res(), TIME_OUT))
-await user.update()
-console.log(user.userID, user.infoString.dim)
-try {
-	// ----------------------------------------------------------------------------
-	console.log('Test: create a session with user instance'.green)
-	let session = new Session(user, { initiator: 'Apple, Webkit, Mozilla' })
-	console.log((await session.init()).valid)
-	console.log(session.user === user)
-	console.log(('Token is ' + (token = session.token)).blue)
-	// ----------------------------------------------------------------------------
-	console.log('Test: retract session using Session.locate'.green)
-	let retractedSession = await new Promise(resolve => {
+new Test('create a session with user instance', true).$(async () => {
+	session = new Session(user, { initiator: 'development test' })
+	token = await session.token
+	return session.valid && session.user === user
+})
+new Test('session preprocessor').$(async () => {
+	return await new Promise(resolve => {
 		let server = express().use(
 			Session.preprocessor,
 			async (req, res) => {
@@ -51,15 +54,10 @@ try {
 			console.log(`Express setup at port 8888 with token=${token}`.yellow)
 		})
 	})
-	console.log(('Retracted session: ' + JSON.stringify({
-		token: retractedSession?.token,
-		user: retractedSession?.user.info,
-		valid: retractedSession?.valid
-	}, null, 2)).blue)
-	// ----------------------------------------------------------------------------
-	console.log('Test: drop session and try accessing it again (expected: session = null)'.green)
-	console.log(JSON.stringify(await session.drop()).blue)
-	console.log('session =', await new Promise(resolve => {
+})
+new Test('drop session and try accessing it again (expected: session = null)', null).$(async () => {
+	await session.drop()
+	return await new Promise(resolve => {
 		let server = express().use(
 			Session.preprocessor,
 			(req, res) => {
@@ -70,13 +68,13 @@ try {
 		).listen(8888, () => {
 			console.log(`Access port 8888 again with token=${token}`.yellow)
 		})
-	}))
-} catch (e) {
-	console.log(e.stack.red)
-}
-let db = DBInit('session/CRUD', 'user/CRUD')
-console.log('Clean up session table (expected to delete NO entry)'.green)
-console.log(await db.session.delete({ token }))
-console.log('Clean up user table'.green)
-console.log(await db.user.delete({ _id: user.userID }))
-process.exit(0)
+	})
+})
+new Test('cleanup session table', { acknowledged: true, deletedCount: 0 }).$(async () => {
+	let db = DBInit('session/CRUD')
+	return await db.session.delete({ token })
+})
+new Test('cleanup session table', { acknowledged: true, deletedCount: 1 }).$(async () => {
+	let db = DBInit('user/CRUD')
+	return await db.user.delete({ _id: user.userID })
+})

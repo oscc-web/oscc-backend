@@ -1,75 +1,81 @@
 // Test actions
 import User from '../lib/user.js'
-import 'colors'
-const TIME_OUT = 500
+import Test from './Test.js'
 // Generate parameters for test purpose
 let userID = Date.now().toString(36),
 	name = 'Test User',
 	mail = 'demo@ysyx.org',
 	OAuthTokens = {},
-	groups = []
-try {
-	// ----------------------------------------------------------------------------
-	console.log('Test: create user'.green)
-	let user = new User({
+	groups = [],
+	/**
+	 * @type {User}
+	 */
+	user
+// ----------------------------------------------------------------------------
+new Test('create user', ([_]) => _).$(() => {
+	user = new User({
 		_id: userID, name, mail, OAuthTokens, groups
 	})
-	console.log(JSON.stringify(user.info).blue)
-	await new Promise(res => setTimeout(() => res(), TIME_OUT))
-	// ----------------------------------------------------------------------------
-	console.log('Test: write to database'.green)
-	console.log(await user.update())
-	await new Promise(res => setTimeout(() => res(), TIME_OUT))
-	// ----------------------------------------------------------------------------
-	console.log('Test: get user info string (no cache)'.green)
-	console.log(user.infoString.blue)
-	await new Promise(res => setTimeout(() => res(), TIME_OUT))
-	// ----------------------------------------------------------------------------
-	console.log('Test: set password <a1b2c3d4>'.green)
-	user.password = 'a1b2c3d4'
-	await new Promise(res => setTimeout(() => res(), TIME_OUT))
-	// ----------------------------------------------------------------------------
-	console.log('Test: login with correct password'.green)
-	console.log(JSON.stringify(user.login('a1b2c3d4')).blue)
-	await new Promise(res => setTimeout(() => res(), TIME_OUT))
-	// ----------------------------------------------------------------------------
-	console.log('Test: login with incorrect password'.green)
-	console.log(JSON.stringify(user.login('wrongPassw0rd')).blue)
-	await new Promise(res => setTimeout(() => res(), TIME_OUT))
-	// ----------------------------------------------------------------------------
-	console.log('Test: get user info string (no cache)'.green)
-	console.log(user.infoString.blue)
-	await new Promise(res => setTimeout(() => res(), TIME_OUT))
-	// ----------------------------------------------------------------------------
-	console.log('Test: get user info string (cached)'.green)
-	console.log(user.infoString.blue)
-	await new Promise(res => setTimeout(() => res(), TIME_OUT))
-	// ----------------------------------------------------------------------------
-	console.log('Test: change user name'.green)
-	console.log((user.name = 'Test User 222').blue)
-	await new Promise(res => setTimeout(() => res(), TIME_OUT))
-	// ----------------------------------------------------------------------------
-	console.log('Test: locate user from database'.green)
-	console.log(JSON.stringify((await User.locate(userID)) instanceof User).blue)
-	await new Promise(res => setTimeout(() => res(), TIME_OUT))
-	// ----------------------------------------------------------------------------
-	console.log('Test: login from database'.green)
-	console.log(JSON.stringify((await User.locate(userID)).login('a1b2c3d4')).blue)
-	await new Promise(res => setTimeout(() => res(), TIME_OUT))
-	// ----------------------------------------------------------------------------
-	console.log('Test: change user password'.green)
-	console.log(JSON.stringify((await User.locate(userID)).password = '123321').blue)
-	await new Promise(res => setTimeout(() => res(), TIME_OUT))
-	// ----------------------------------------------------------------------------
-	console.log('Test: login again'.green)
-	console.log(JSON.stringify((await User.locate(userID)).login('123321')).blue)
-	await new Promise(res => setTimeout(() => res(), TIME_OUT))
-	// ----------------------------------------------------------------------------
-	console.log('Test: login again (incorrect)'.green)
-	console.log(JSON.stringify((await User.locate(userID)).login('a1b2c3d4')).blue)
-	await new Promise(res => setTimeout(() => res(), TIME_OUT))
-} catch (e) {
-	console.log(e.stack.red)
-}
-console.log('Test end, clean up database'.green)
-User.db.user.delete({ _id: userID })
+	return [user instanceof User, user.info]
+})
+// ----------------------------------------------------------------------------
+new Test('write to database').$(async () => {
+	return await user.update()
+})
+// ----------------------------------------------------------------------------
+new Test('write to database').$(async () => {
+	return await user.update()
+})
+// ----------------------------------------------------------------------------
+new Test('get user info string (no cache)').$(async () => {
+	return user.infoString
+})
+// ----------------------------------------------------------------------------
+new Test('set password <a1b2c3d4>').$(async () => {
+	return user.password = 'a1b2c3d4'
+})
+// ----------------------------------------------------------------------------
+new Test('login with correct password', true).$(async () => {
+	return await user.login('a1b2c3d4')
+})
+// ----------------------------------------------------------------------------
+new Test('login with incorrect password', false).$(async () => {
+	return await user.login('wrongPassw0rd')
+})
+// ----------------------------------------------------------------------------
+new Test('get user info string (no cache)', _ => typeof _ === 'string').$(async () => {
+	return user.infoString
+})
+// ----------------------------------------------------------------------------
+new Test('get user info string (cached)', _ => typeof _ === 'string').$(async () => {
+	return user.infoString
+})
+// ----------------------------------------------------------------------------
+new Test('change user name', name = 'Test User 222').$(async () => {
+	user.name = name
+	return await user.name
+})
+// ----------------------------------------------------------------------------
+new Test('locate user from database', _ => _ instanceof User).$(async () => {
+	return await User.locate(userID)
+})
+// ----------------------------------------------------------------------------
+new Test('login from database', true).$(async () => {
+	return await (await User.locate(userID)).login('a1b2c3d4')
+})
+// ----------------------------------------------------------------------------
+new Test('change user password').$(async () => {
+	(await User.locate(userID)).password = '123321'
+})
+// ----------------------------------------------------------------------------
+new Test('login again', true).$(async () => {
+	return await (await User.locate(userID)).login('123321')
+})
+// ----------------------------------------------------------------------------
+new Test('login again (incorrect)', false).$(async () => {
+	return await (await User.locate(userID)).login('a1b2c3d4')
+})
+// ----------------------------------------------------------------------------
+new Test('cleanup database', ({ deletedCount }) => deletedCount === 1).$(async () => {
+	return await User.db.user.delete({ _id: userID })
+})
