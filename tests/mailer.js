@@ -21,7 +21,7 @@ let payload = {
 }
 console.log('Test: fetch mailer response code is 200, returns as expected'.green)
 let req = http.request(options, res => {
-	console.log('Status: ' + res.statusCode);
+	console.log('Status: ' + res.statusCode)
 })
 req.write(JSON.stringify(payload))
 req.end()
@@ -29,7 +29,7 @@ await new Promise(res => setTimeout(() => res(), TIME_OUT))
 payload.template = 'noExistTemplate'
 console.log('Test: fetch mailer response code is 500, returns as expected'.green)
 req = http.request(options, res => {
-	console.log('Status: ' + res.statusCode);
+	console.log('Status: ' + res.statusCode)
 })
 req.write(JSON.stringify(payload))
 req.end()
@@ -37,7 +37,7 @@ await new Promise(res => setTimeout(() => res(), TIME_OUT))
 options.method = 'GET'
 console.log('Test: fetch mailer response code is 404, returns as expected'.green)
 req = http.request(options, res => {
-	console.log('Status: ' + res.statusCode);
+	console.log('Status: ' + res.statusCode)
 })
 req.end()
 await new Promise(res => setTimeout(() => res(), TIME_OUT))
