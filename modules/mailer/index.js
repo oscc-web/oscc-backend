@@ -33,7 +33,16 @@ http.createServer((req, res) => {
 					|| !args || (typeof args !== 'object')
 					|| !to || (typeof to !== 'string')
 				) return logger.warn('Request has insufficient arguments: ' + JSON.stringify({ to, template, args })) && res.writeHead(400).end()
-				let { subject, html } = render(template, args)
+				let subject, html
+				try {
+					let renderResult = render(template, args)
+					subject = renderResult.subject
+					html = renderResult.html
+				} catch (error) {
+					logger.warn(error.stack)
+					res.writeHead(500).end()
+					return
+				}
 				fs.writeFileSync(`${PROJECT_ROOT}/var/log/mailer/${template}.out.html`, html)
 				transport.sendMail({
 					from: SMTP.auth.user,
