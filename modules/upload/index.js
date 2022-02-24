@@ -1,4 +1,3 @@
-import http from 'http'
 // Environmental setup
 import { init, logger, config, PROJECT_ROOT } from '../../lib/env.js'
 import formidable from 'formidable'
@@ -96,7 +95,7 @@ app.listen(config.port.upload, () => {
 })
 // scheduled deletion
 const expireTime = config.upload.expireTime //milliseconds
-const job = new CronJob('* * * * * *', () => {
+const job = new CronJob(config.upload.cron, () => {
 	let now = new Date().getTime()
 	db.upload
 		.find({ type: 'temp', createTime: { $lt: now - expireTime } })
