@@ -35,23 +35,24 @@ const
 			Test.silent = true
 		}
 	}
-let args = process.argv.slice(2),
+let args = process.argv
+		.slice(2)
+		// Parse and filter flags
+		.filter(arg => {
+			if (arg = /^-(?<arg>[A-Za-z]+)$/.exec(arg)?.groups?.arg) {
+				arg.split('').forEach(c => { if (c in params) params[c]() })
+				return false
+			}
+			if (arg = /^-(?<arg>[A-Za-z]+)$/.exec(arg)?.groups?.arg) {
+				if (arg in params) params[arg]()
+				return false
+			}
+			return true
+		}),
 	failedCount = 0
 if (args.length === 0) args = list
 // Add path elements to arg string
 args = args
-	// Parse and filter flags
-	.filter(arg => {
-		if (arg = /^-(?<arg>[A-Za-z]+)$/.exec(arg)?.groups?.arg) {
-			arg.split('').forEach(c => { if (c in params) params[c]() })
-			return false
-		}
-		if (arg = /^-(?<arg>[A-Za-z]+)$/.exec(arg)?.groups?.arg) {
-			if (arg in params) params[arg]()
-			return false
-		}
-		return true
-	})
 	// Add prefix
 	.map(el => [el, el])
 	// Add prefix
@@ -72,7 +73,7 @@ for (const [file, name] of args) {
 			console.log(e.stack)
 			console.log(''.padEnd(process.stdout.columns, '-'))
 		}
-		failedCount ++
+		failedCount++
 	}
 }
 process.exit(failedCount)

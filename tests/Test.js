@@ -13,7 +13,11 @@ export default class Test {
 	/**
 	 * @type {Number | String | Function<Boolean> | undefined}
 	 */
-	expect
+	#expect
+	expect(val) {
+		this.#expect = val
+		return this
+	}
 	/**
 	 * @type {Boolean}
 	 */
@@ -35,45 +39,53 @@ export default class Test {
 	constructor(name, expect = () => true, endOnUncaughtError = false) {
 		[
 			this.name,
-			this.expect,
+			this.#expect,
 			this.endOnUncaughtError
 		] = [name, expect, endOnUncaughtError]
 		this.result = new Promise((res, rej) => this.promise = { res, rej })
 	}
 	// Push test into queue
-	$(f) {
+	/**
+	 * register callback function to run
+	 * @param {Function} f 
+	 * @returns {Test}
+	 */
+	run(f) {
 		if (typeof f !== 'function') throw new SyntaxError('Test input has to be a function')
 		Test.queue(this).then(async () => {
 			try {
 				const result = await f()
 				let pass
-				if (typeof this.expect === 'function') {
-					pass = this.expect(result)
-				} else if (typeof this.expect === 'object' && _.isEqual(this.expect, result)) {
+				if (this.#expect?.prototype && result instanceof this.#expect) {
+					pass = true
+				} else if (typeof this.#expect === 'function') {
+					pass = this.#expect(result)
+				} else if (typeof this.#expect === 'object' && _.isEqual(this.#expect, result)) {
 					pass = true
 				} else {
-					pass = result === this.expect
+					pass = result === this.#expect
 				}
-				if (pass) return this.pass('Returns as expected: ' + JSON.stringify(result))
-				else return this.fail('Unexpected result: ' + JSON.stringify(result))
+				if (pass) return this.#pass('Returns as expected: ' + JSON.stringify(result))
+				else return this.#fail('Unexpected result: ' + JSON.stringify(result))
 			} catch (e) {
-				if (this.expect.prototype && e instanceof this.expect) {
-					return this.pass('Throws error as expected: ' + e.stack)
+				if (this.#expect.prototype && e instanceof this.#expect) {
+					return this.#pass('Throws error as expected: ' + e.stack)
 				} else {
 					if (this.endOnUncaughtError) throw e
-					return this.fail('Unexpected error: ' + e.stack.underline)
+					return this.#fail('Unexpected error: ' + e.stack.underline)
 				}
 			}
 		})
+		return this
 	}
-	pass(info) {
+	#pass(info) {
 		if (Test.verbose) {
 			console.log(`Test PASSED: ${this.name}`.green)
 			console.log(info.dim)
 		}
 		this.promise.res(true)
 	}
-	fail(info) {
+	#fail(info) {
 		if (!Test.silent) {
 			console.log(`Test FAILED: ${this.name} (${this.trace.underline})`.red)
 			console.log(info.dim)
@@ -126,7 +138,7 @@ export default class Test {
 				` Test summary for ${title}: `,
 				...Object
 					.entries(summary)
-					.map(([name, value]) => `   * ${name.padEnd(maxLength)}: ${value.toString()} `)
+					.map(([name, value]) => `  - ${name.padEnd(maxLength)}: ${value.toString()} `)
 			],
 			lineWidth = Math.max(...str.map(el => el.length)) + 1,
 			[bs, be] = ['▄', '▀'].map(el => ' ' + ''.padEnd(lineWidth, el)),
@@ -134,7 +146,7 @@ export default class Test {
 			bgColor = summary.failed ? 'bgYellow' : 'bgGreen'
 		return [
 			bs[color],
-			...str.map(str => (' ' + str.padEnd(lineWidth)[bgColor])),
+			...str.map(str => (' ' + str.padEnd(lineWidth).black[bgColor])),
 			be[color],
 		].join('\n')
 	}
