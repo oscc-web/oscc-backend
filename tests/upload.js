@@ -5,7 +5,7 @@ import fs from 'fs-extra'
 import http from 'http'
 import FormData from 'form-data'
 init(import.meta)
-let db = await dbInit('fileSystem/crud')
+let db = await dbInit('upload/crud')
 const TIME_OUT = 2000
 let options = {
 	'method': 'GET',
@@ -16,7 +16,7 @@ let options = {
 const readStream = fs.createReadStream(`${PROJECT_ROOT}/README.md`)
 let form = new FormData()
 form.append('fileUpLoad', readStream)
-console.log('Test: fetch fileSystem response code is 403, returns as expected'.green)
+console.log('Test: fetch upload response code is 403, returns as expected'.green)
 let req = http.request(options, res =>
 	console.log(res.statusCode.toString().blue)
 )
@@ -25,13 +25,13 @@ await new Promise(res => setTimeout(() => res(), TIME_OUT))
 options.headers = {
 	'Cookie': '__internal_user_info={"id":123,"name":"wxl"}',
 }
-console.log('Test: fetch fileSystem response code is 405, returns as expected'.green)
+console.log('Test: fetch upload response code is 405, returns as expected'.green)
 req = http.request(options, res =>
 	console.log(res.statusCode.toString().blue)
 )
 req.end()
 await new Promise(res => setTimeout(() => res(), TIME_OUT))
-console.log('Test: fetch fileSystem response code is 200, returns as expected'.green)
+console.log('Test: fetch upload response code is 200, returns as expected'.green)
 options.method = 'POST'
 options.headers = form.getHeaders()
 options.headers.Cookie = '__internal_user_info={"id":123,"name":"wxl"}'
@@ -43,7 +43,7 @@ req = http.request(options, res => {
 		try {
 			// const parsedData = JSON.parse(rawData);
 			console.log('Test: find file in db'.green)
-			console.log(JSON.stringify((await db.fileSystem.find({ _id: rawData }).toArray())[0]).blue)
+			console.log(JSON.stringify((await db.upload.find({ _id: rawData }).toArray())[0]).blue)
 			console.log('Test: find file in fs'.green)
 			console.log(fs.existsSync(`${PROJECT_ROOT}/tmp/${rawData}`))
 		} catch (e) {
@@ -52,10 +52,10 @@ req = http.request(options, res => {
 	})
 })
 form.pipe(req)
-await new Promise(res => setTimeout(() => res(), config.fileSystem.expireTime))
+await new Promise(res => setTimeout(() => res(), config.upload.expireTime))
 await new Promise(res => setTimeout(() => res(), TIME_OUT))
 console.log('Test: can not find file in db after expire time'.green)
-console.log(JSON.stringify((await db.fileSystem.find({ _id: rawData }).toArray())[0]))
+console.log(JSON.stringify((await db.upload.find({ _id: rawData }).toArray())[0]))
 console.log('Test: can not find file in fs after expire time'.green)
 console.log(fs.existsSync(`${PROJECT_ROOT}/tmp/${rawData}`))
 
@@ -75,7 +75,7 @@ options.headers = {
 	'Content-Type': 'application/json',
 	'Cookie': '__internal_user_info={"id":123,"name":"wxl"}'
 }
-console.log('Test: fetch fileSystem response code is 404, returns as expected'.green)
+console.log('Test: fetch upload response code is 404, returns as expected'.green)
 req = http.request(options, res => {
 	console.log(res.statusCode.toString().blue)
 })
@@ -85,7 +85,7 @@ req.write(JSON.stringify({
 }))
 req.end()
 await new Promise(res => setTimeout(() => res(), TIME_OUT))
-console.log('Test: fetch fileSystem response code is 200, returns as expected'.green)
+console.log('Test: fetch upload response code is 200, returns as expected'.green)
 await new Promise(res => setTimeout(() => res(), TIME_OUT))
 req = http.request(options, res => {
 	console.log(res.statusCode.toString().blue)
@@ -96,15 +96,15 @@ req.write(JSON.stringify({
 	'fileType': 'persistent'
 }))
 req.end()
-await new Promise(res => setTimeout(() => res(), config.fileSystem.expireTime))
+await new Promise(res => setTimeout(() => res(), config.upload.expireTime))
 await new Promise(res => setTimeout(() => res(), TIME_OUT))
 console.log('Test: can find file in db after expire time'.green)
-console.log(JSON.stringify((await db.fileSystem.find({ _id: str }).toArray())[0]).blue)
+console.log(JSON.stringify((await db.upload.find({ _id: str }).toArray())[0]).blue)
 console.log('Test: can find file in fs after expire time'.green)
 console.log(fs.existsSync(`${PROJECT_ROOT}/tmp/${str}`))
 
 await new Promise(res => setTimeout(() => res(), TIME_OUT))
-console.log('Test: fetch fileSystem response code is 400, returns as expected'.green)
+console.log('Test: fetch upload response code is 400, returns as expected'.green)
 req = http.request(options, res => {
 	console.log(res.statusCode.toString().blue)
 })
@@ -114,7 +114,7 @@ req.write(JSON.stringify({
 }))
 req.end()
 await new Promise(res => setTimeout(() => res(), TIME_OUT))
-console.log('Test: fetch fileSystem response code is 200, returns as expected'.green)
+console.log('Test: fetch upload response code is 200, returns as expected'.green)
 await new Promise(res => setTimeout(() => res(), TIME_OUT))
 req = http.request(options, res => {
 	console.log(res.statusCode.toString().blue)
@@ -125,10 +125,10 @@ req.write(JSON.stringify({
 }))
 req.end()
 
-await new Promise(res => setTimeout(() => res(), config.fileSystem.expireTime))
+await new Promise(res => setTimeout(() => res(), config.upload.expireTime))
 await new Promise(res => setTimeout(() => res(), TIME_OUT))
 console.log('Test: can not find file in db after expire time'.green)
-console.log(JSON.stringify((await db.fileSystem.find({ _id: str }).toArray())[0]))
+console.log(JSON.stringify((await db.upload.find({ _id: str }).toArray())[0]))
 console.log('Test: can not find file in fs after expire time'.green)
 console.log(fs.existsSync(`${PROJECT_ROOT}/tmp/${str}`))
 console.log('Test end'.green)
