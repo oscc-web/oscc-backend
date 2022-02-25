@@ -1,34 +1,65 @@
-// Test actions
 import dbInit from '../utils/mongo.js'
-import 'colors'
-let db = await dbInit('test/cr')
+import Test from './Test.js'
+let db
 let id = Date.now().toString(36)
-// Test: normal read and write
-// Test: has access to insert, returns as expected
-console.log('Test: has access to insert, returns as expected'.green)
-console.log(JSON.stringify(await db.test.insert({ _id: id, data: process.argv }), null, 2).blue)
-// Test: has access to read, returns as expected
-console.log('Test: has access to read, returns as expected'.green)
-console.log(JSON.stringify((await db.test.find().toArray()), null, 2).blue)
-// Test: no access to delete, will throw error
-console.log('Test: no access to delete, will throw error'.green)
-try {
-	await db.test.delete({ _id: id })
-} catch (e) {
-	console.error(e.stack.red)
-}
-// Test: full access to 'test' database, do update and delete operations
-console.log('Test: full access to database <test>, do update and delete operations'.green)
-db = await dbInit('test/CRUD')
-console.log('Test: first, update entry with updated: <DateString>'.green)
-console.log(JSON.stringify((await db.test.update(
-	{ _id: id },
-	{
-		$set: {
-			updated: (new Date).toISOString()
-		}
-	})), null, 2).blue)
-console.log(JSON.stringify((await db.test.find({ _id: id }).toArray()), null, 2).dim)
-console.log('Test: then, delete this entry'.green)
-console.log(JSON.stringify((await db.test.delete({ _id: id })), null, 2).blue)
-console.log(JSON.stringify((await db.test.find({ _id: id }).toArray()), null, 2).dim)
+
+new Test('create connection with C/R access')
+	.run(async () => {
+		return db = await dbInit('test/cr')
+	})
+
+new Test('has access to insert, returns as expected')
+	.run(async () => {
+		return await db.test.insert({
+			_id: id,
+			data: process.argv
+		})
+	})
+	.expect({ acknowledged: true, insertedId: id })
+
+new Test('has access to read, returns as expected')
+	.run(async () => {
+		return await db.test.find().toArray()
+	})
+	.expect(arr => arr.length > 0)
+
+new Test('no access to delete, will throw error')
+	.run(async () => {
+		await db.test.delete({ _id: id })
+	})
+	.expect(Error)
+
+new Test('full access to database <test>, do update and delete operations')
+	.run(async () => {
+		db = await dbInit('test/CRUD')
+	})
+
+new Test('first, update entry with updated: <DateString>')
+	.run(async () => {
+		return await db.test.update(
+			{ _id: id },
+			{
+				$set: {
+					updated: (new Date).toISOString()
+				}
+			})
+	})
+	.expect(({ acknowledged, modifiedCount }) => acknowledged && modifiedCount)
+
+new Test('then, find the entry')
+	.run(async () => {
+		return await db.test.find({ _id: id }).toArray()
+	})
+	.expect(arr => arr.length === 1)
+
+new Test('finally, delete this entry')
+	.run(async () => {
+		return await db.test.delete({ _id: id })
+	})
+	.expect({ acknowledged: true, deletedCount: 1 })
+
+new Test('check if this entry has really been deleted')
+	.run(async () => {
+		return await db.test.find({ _id: id }).toArray()
+	})
+	.expect(arr => arr.length === 0)
