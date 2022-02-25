@@ -1,9 +1,15 @@
 // Imports
-import { init, resolveDistPath, config, logger, internalCookieRx } from '../lib/env.js'
+import { init, resolveDistPath, config, logger, Rx } from '../lib/env.js'
 import express from 'express'
+// Middleware
 import vhost from './middleware/vhost.js'
 import proxy from './middleware/proxy.js'
+import privileged from './middleware/privileged.js'
+// Strategies
+import home from './strategies/home.js'
+// Libraries
 import Session from '../lib/session.js'
+import { PRIV } from '../lib/privileges.js'
 // Extract related configs from user config
 const port = config?.port?.router || 8080
 // Environment setup
@@ -21,7 +27,7 @@ express()
 		// these cookies are likely to be used internally,
 		// and should never be passed through to application servers
 		let filteredCookies = req.filterCookies(
-			name => !internalCookieRx.test(name)
+			name => !Rx.internalCookie.test(name)
 		)
 		if (filteredCookies.length) logger.errAcc(
 			'Internal cookies found in request, will be removed',
@@ -33,16 +39,29 @@ express()
 	// YSYX.ORG
 	.use(vhost(
 		/^ysyx.(org|cc|dev|local)$/i,
+		// Routing strategy
+		home,
+		// Static file server
 		express.static(resolveDistPath('ysyx'))
 	))
 	// DOCS
 	.use(vhost(
 		/^docs.ysyx.(org|cc|dev|local)$/i,
+		// Session preprocessor
+		Session.preprocessor,
+		// Privileged access filter
+		privileged(PRIV.DOCS_PRIVATE_ACCESS, {
+			activeCond: req => /^\/?(private|internal)/i.test(req.url)
+		}),
+		// Static file server
 		express.static(resolveDistPath('ysyx.docs'))
 	))
 	// SPACE
 	.use(vhost(
 		/^space.ysyx.(org|cc|dev|local)$/i,
+		// Session preprocessor
+		Session.preprocessor,
+		// Static file server
 		express.static(resolveDistPath('ysyx.space'))
 	))
 	// FORUM
@@ -82,12 +101,13 @@ express()
 		res.status(404)
 		logger.errAcc(`Unable to handle request ${req.headers.host}${req.url} from ${req.origin}`)
 		// respond with html page
-		if (req.accepts('html')) {
-			res.render('404', { url: req.url })
-			return
-		}
+		// if (req.accepts('html')) {
+		// res.render('404', { url: req.url })
+		// return
+		// }
 		// fallback to plain-text
-		else res.type('txt').send('404 Not found')
+		// else
+		res.type('txt').send('404 Not found')
 	})
 	// Open listening port
 	.listen(port, () => logger.info(`Service up and running at port ${port}`))

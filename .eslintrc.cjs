@@ -30,7 +30,7 @@ module.exports = {
 			'never'
 		],
 		'no-unused-vars': [
-			1,
+			0,
 			{ 'vars': 'all', 'args': 'after-used' }
 		],
 		'no-cond-assign': [
