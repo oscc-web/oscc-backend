@@ -1,9 +1,9 @@
 import { init } from '../lib/env.js'
 import http from 'http'
-import 'colors'
+import Test from './Test.js'
+import { resolve } from 'path'
 
 init(import.meta)
-const TIME_OUT = 2000
 let options = {
 	hostname: '127.0.0.1',
 	port: 9998,
@@ -19,27 +19,39 @@ let payload = {
 		link: 'ysyx.org/register?token=token123456'
 	}
 }
-console.log('Test: fetch mailer response code is 200, returns as expected'.green)
-let req = http.request(options, res => {
-	console.log('Status: ' + res.statusCode)
-})
-req.write(JSON.stringify(payload))
-req.end()
-await new Promise(res => setTimeout(() => res(), TIME_OUT))
-payload.template = 'noExistTemplate'
-console.log('Test: fetch mailer response code is 500, returns as expected'.green)
-req = http.request(options, res => {
-	console.log('Status: ' + res.statusCode)
-})
-req.write(JSON.stringify(payload))
-req.end()
-await new Promise(res => setTimeout(() => res(), TIME_OUT))
-options.method = 'GET'
-console.log('Test: fetch mailer response code is 404, returns as expected'.green)
-req = http.request(options, res => {
-	console.log('Status: ' + res.statusCode)
-})
-req.end()
-await new Promise(res => setTimeout(() => res(), TIME_OUT))
-console.log('Test end'.green)
+new Test('fetch mailer with correct option and payload')
+	.run(async () => {
+		return await new Promise(resolve => {
+			let req = http.request(options, res => {
+				resolve(res.statusCode)
+			})
+			req.write(JSON.stringify(payload))
+			req.end()
+		})
+	}).expect(200)
+
+new Test('fetch mailer with GET method and payload')
+	.run(async () => {
+		return await new Promise(resolve => {
+			options.method = 'GET'
+			let req = http.request(options, res => {
+				resolve(res.statusCode)
+			})
+			req.write(JSON.stringify(payload))
+			req.end()
+		})
+	}).expect(404)
+
+new Test('fetch mailer with nonexistent template and payload')
+	.run(async () => {
+		return await new Promise(resolve => {
+			options.method = 'POST'
+			payload.template = 'noExistTemplate'
+			let req = http.request(options, res => {
+				resolve(res.statusCode)
+			})
+			req.write(JSON.stringify(payload))
+			req.end()
+		})
+	}).expect(500)
 
