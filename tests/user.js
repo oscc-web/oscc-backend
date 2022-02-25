@@ -1,8 +1,9 @@
 // Test actions
 import User from '../lib/user.js'
+import { seed } from '../utils/crypto.js'
 import Test from './Test.js'
 // Generate parameters for test purpose
-let userID = Date.now().toString(36),
+let userID = seed(12),
 	name = 'Test User',
 	mail = 'demo@ysyx.org',
 	OAuthTokens = {},
@@ -46,7 +47,7 @@ new Test('login with correct password')
 
 new Test('login with incorrect password')
 	.run(async () => {
-		return await user.login('wrongPassw0rd')
+		return await user.login('wrongPassword')
 	})
 	.expect(false)
 

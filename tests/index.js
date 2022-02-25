@@ -1,7 +1,7 @@
 import Test from './Test.js'
-// Do tests
+let loggerOutputLevel
 const
-	list = ['mongo', 'user', 'session'],
+	list = ['mongo', 'user', 'session', 'groups'],
 	params = {
 		h() { this.help() },
 		help() {
@@ -9,6 +9,7 @@ const
 				out = {
 					'-h, --help': 'Print this message',
 					'-v, --verbose': 'Output all test info, including successful ones',
+					'-V': 'Toggle both tester and logger\'s verbose mode',
 					'-s, --silent': 'Output nothing (exit code only)',
 				}
 			console.log(
@@ -29,6 +30,10 @@ const
 		v() { this.verbose() },
 		verbose() {
 			Test.verbose = true
+		},
+		V() {
+			loggerOutputLevel = 'verbose'
+			this.verbose()
 		},
 		s() { this.silent() },
 		silent() {
@@ -51,6 +56,9 @@ let args = process.argv
 		}),
 	failedCount = 0
 if (args.length === 0) args = list
+// Initialize env parameters
+import { init } from '../lib/env.js'
+init(import.meta, loggerOutputLevel)
 // Add path elements to arg string
 args = args
 	// Add prefix

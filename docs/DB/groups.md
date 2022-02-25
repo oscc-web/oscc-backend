@@ -33,13 +33,15 @@ At runtime, the available options of privileges are inducted from a special grou
 
 	Defines whether this group is visible to the users.
 
-	`all`: Everyone can see if a user is a member of this group
+	`ALL`: Everyone can see if a user is a member of this group
 
-	`self`: Only the user himself can see if he is member of this group
+	`SELF`: Only the user himself can see if he is member of this group
 
-	`none`: No one can see if a user is member of this group
+	`SAME-GROUP`: Visible to people who are in the same group
 
-	> exception: User with privilege `alter-group` can see all group info.
+	`NONE`: No one can see if a user is member of this group
+
+	> EXCEPTION: User with privilege `alter-group` can see all group info.
 
 + `LocaleNames`: JSON Object
 

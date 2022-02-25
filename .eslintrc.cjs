@@ -18,7 +18,8 @@ module.exports = {
 		],
 		'indent': [
 			1,
-			'tab'
+			'tab',
+			{ SwitchCase: 1 }
 		],
 		'quotes': [
 			1,
@@ -31,6 +32,13 @@ module.exports = {
 		'no-unused-vars': [
 			1,
 			{ 'vars': 'all', 'args': 'after-used' }
+		],
+		'no-cond-assign': [
+			0
+		],
+		'object-curly-spacing': [
+			1,
+			'always'
 		],
 		'spellcheck/spell-checker': [
 			1,
@@ -53,6 +61,7 @@ module.exports = {
 					'\\.[cm]?js$',
 					'getters?',
 					'setters?',
+					'^std'
 				],
 				'skipWordIfMatch': [
 					'ysyx',
