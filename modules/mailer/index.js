@@ -1,4 +1,4 @@
-import http from 'http'
+import express from 'express'
 import nodemailer from 'nodemailer'
 import fs from 'fs'
 import soda from 'sodajs/dist/soda.node.js'
@@ -10,11 +10,12 @@ const SMTP = config.mailer
 // create nodemailer transport
 const transport = nodemailer.createTransport(SMTP)
 logger.info(`Starting Mailer as <${SMTP.auth.user}>`)
-http.createServer((req, res) => {
+let app = express()
+app.use((req, res) => {
 	const body = []
 	if (req.method !== 'POST') {
 		logger.warn(`Rejected ${req.method} request from ${req.origin}`)
-		res.writeHead(404).end()
+		res.status(404).send()
 	} else {
 		req
 			.on('data', chunk => body.push(chunk))
@@ -24,7 +25,7 @@ http.createServer((req, res) => {
 				const payload = JSON.parse(body.join(''))
 				if (!payload || typeof payload !== 'object') {
 					// Payload is not a valid JSON object
-					return logger.warn('Request payload is not an JSON object: ' + JSON.stringify(payload)) && res.writeHead(400).end()
+					return logger.warn('Request payload is not an JSON object: ' + JSON.stringify(payload)) && res.status(400).send()
 				}
 				// Check if requested fields exist in payload
 				let { template, args, to } = payload
@@ -32,7 +33,7 @@ http.createServer((req, res) => {
 					|| !template || (typeof template !== 'string')
 					|| !args || (typeof args !== 'object')
 					|| !to || (typeof to !== 'string')
-				) return logger.warn('Request has insufficient arguments: ' + JSON.stringify({ to, template, args })) && res.writeHead(400).end()
+				) return logger.warn('Request has insufficient arguments: ' + JSON.stringify({ to, template, args })) && res.status(400).send()
 				let subject, html
 				try {
 					let renderResult = render(template, args)
@@ -40,7 +41,7 @@ http.createServer((req, res) => {
 					html = renderResult.html
 				} catch (error) {
 					logger.warn(error.stack)
-					res.writeHead(500).end()
+					res.status(500).end()
 					return
 				}
 				fs.writeFileSync(`${PROJECT_ROOT}/var/log/mailer/${template}.out.html`, html)
@@ -51,12 +52,13 @@ http.createServer((req, res) => {
 					subject,
 					html
 				})
-					.then(() => res.writeHead(200).end())
+					.then(() => res.status(200).send())
 					.then(() => logger.info(`Mail "${subject}" sent to ${to} with args ${JSON.stringify(args)}`))
 					.catch(e => logger.warn('Failed to send mail: ' + e.stack))
 			})
 	}
-}).listen(config.port.mailer, () => {
+})
+app.listen(config.port.mailer, () => {
 	logger.info(`Mailer up and running at port ${config.port.mailer}`)
 })
 
