@@ -3,7 +3,7 @@ import { PRIV, PRIV_LUT } from '../../lib/privileges.js'
 import User from '../../lib/user.js'
 /**
  * Only let users with appropriate privileges pass through.
- * NOTICE: This middleware is intended Session.preprocessor 
+ * NOTICE: This middleware is intended to be used after Session.preprocessor 
  * @param {(PRIV | PRIV_LUT)[]} priv 
  * @param {{
  * activeCond: (req: import('express').Request) => Boolean,
