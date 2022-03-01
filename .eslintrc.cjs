@@ -40,6 +40,10 @@ module.exports = {
 			1,
 			'always'
 		],
+		'keyword-spacing': [
+			1,
+			{'before': true, 'after': true}
+		],
 		'spellcheck/spell-checker': [
 			1,
 			{
