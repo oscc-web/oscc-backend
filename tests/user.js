@@ -27,11 +27,11 @@ new Test('write to database')
 	})
 	.expect(true)
 
-new Test('get user info string (no cache)')
+new Test('get user info')
 	.run(async () => {
-		return user.infoString
+		return user.info
 	})
-	.expect(_ => typeof _ === 'string')
+	.expect(_ => typeof _ === 'object')
 
 new Test('set password <a1b2c3d4>')
 	.run(async () => {
@@ -51,17 +51,11 @@ new Test('login with incorrect password')
 	})
 	.expect(false)
 
-new Test('get user info string (no cache)')
+new Test('get user info')
 	.run(async () => {
-		return user.infoString
+		return user.info
 	})
-	.expect(_ => typeof _ === 'string')
-
-new Test('get user info string (cached)')
-	.run(async () => {
-		return user.infoString
-	})
-	.expect(_ => typeof _ === 'string')
+	.expect(_ => typeof _ === 'object')
 
 new Test('change user name')
 	.run(async () => {
