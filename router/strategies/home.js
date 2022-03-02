@@ -4,6 +4,8 @@ import Session, { SESSION_TOKEN_NAME } from '../../lib/session.js'
 import User from '../../lib/user.js'
 import { logger, config } from '../../lib/env.js'
 import http from 'http'
+import { AppData } from '../../lib/appData.js'
+import { seed } from '../../utils/crypto.js'
 // Announce express server instance
 /**
  * @type {import('express').Express}
@@ -45,7 +47,7 @@ const server = express()
 	.get('/logout',
 		async (req, res, next) => {
 			let session = await Session.locate(req)
-			if(session instanceof Session) {
+			if (session instanceof Session) {
 				logger.access(`userID: ${session.userID} logout`)
 				session.drop()
 			} 
@@ -53,15 +55,56 @@ const server = express()
 			res.redirect('/')
 		}
 	)
+	.get('/register', (req, res, next) => {
+		res.redirect('/')
+	})
 	.post('/register',
 		async (req, res, next) => {
 			let payload = req.body
 			if (!payload || typeof payload !== 'object') {
 				res.sendStatus(400)
 			}
-			let registerToken = req.query.token
-			// find and check token
-			// await db.xxx.find({ mail,token:registerToken }).toArray()
+			let appData = new AppData(),
+				IDRegex = /^[a-zA-Z][a-zA-Z0-9\-_]{4,15}$/,
+				mailRegex = /^\w+(\w+|\.|-)*\w+@([\w\-_]+\.)+[a-zA-Z]{1,3}$/
+			// check if token exists
+			if (!req.query?.token) {
+				let { mail } = payload
+				if (!mail || !(typeof mail === 'string') || !mailRegex.test(mail)) {
+					logger.warn('Invalid mail')
+					return res.json({ register: false, msg: 'Invalid mail' })
+				}
+				// generate token
+				let token = seed(6),
+					query = await appData.load({ mail, appID: appData.appID })
+				if (query || (await User.locate(mail))){ 
+					logger.verbose(`mail: <${mail}> has already been registered`)
+					return res.json({ register: false, msg: 'Mail has been registered' })
+				}
+				let	result = await appData.store({ token }, { mail, appID: appData.appID })
+				if (result?.acknowledged) {
+					let mailerReq = http.request(
+						{
+							hostname: '127.0.0.1',
+							port: config.port.mailer,
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json',
+							}
+						}
+					)
+					mailerReq.write(JSON.stringify({
+						template: 'validateEmail',
+						to: mail,
+						args:{ link: `ysyx.org/register?token=${token}` }
+					}))
+					mailerReq.end()
+					return res.send()
+				} else {
+					logger.info(`Insert token<${token}> and mail<${mail}> Error`)
+					return res.sendStatus(500)
+				} 
+			}
 			let {
 				userID,
 				name,
@@ -69,12 +112,16 @@ const server = express()
 				password,
 				OAuthTokens
 			} = payload
-			let IDRegex = /^[a-zA-Z][a-zA-Z0-9\-_]{4,15}$/
+			let registerToken = req.query.token,
+				content = await appData.load({ mail, appID: appData.appID })
+			if (!content || content.token !== registerToken) {
+				logger.errAcc(`token <${registerToken}> cannot match the one bound to the mail <${mail}> in the database`)
+				return res.send({ register:false, msg:'Invalid token' })
+			}
 			if (!userID || !(typeof userID === 'string') || !IDRegex.test(userID)) {
 				logger.warn('Invalid userID')
 				return res.json({ register: false, msg: 'Invalid userID' })
 			}
-			let mailRegex = /^\w+(\w+|\.|-)*\w+@([\w\-_]+\.)+[a-zA-Z]{1,3}$/
 			if (!mail || !(typeof mail === 'string') || !mailRegex.test(mail)) {
 				logger.warn('Invalid mail')
 				return res.json({ register: false, msg: 'Invalid mail' })
@@ -94,7 +141,7 @@ const server = express()
 			let user = new User({ userID, name, mail, OAuthTokens })
 			await user
 				.update()
-				.then(() => {
+				.then(async() => {
 					user.password = password
 					res.json({ register: true })
 					let mailerReq = http.request(
@@ -113,6 +160,8 @@ const server = express()
 						args:{}
 					}))
 					mailerReq.end()
+					await appData.delete({ mail, appID: appData.appID })
+					logger.access(`User ${user} successfully registered`)
 				})
 				.catch(e => {
 					logger.error(`create user error: ${e.stack}`)
@@ -128,7 +177,7 @@ const server = express()
 				res.sendStatus(400)
 			}
 			let { userID, mail } = payload
-			if(await User.locate(userID) || await User.locate(mail)) return res.json({ exist: true })
+			if (await User.locate(userID) || await User.locate(mail)) return res.json({ exist: true })
 			return res.json({ exist: false })
 		}) 
 // Expose handle function as default export
