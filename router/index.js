@@ -1,6 +1,7 @@
 // Imports
 import { init, resolveDistPath, config, logger, Rx } from '../lib/env.js'
 import express from 'express'
+import fs from 'fs'
 // Middleware
 import vhost from './middleware/vhost.js'
 import proxy from './middleware/proxy.js'
@@ -42,7 +43,24 @@ express()
 		// Routing strategy
 		home,
 		// Static file server
-		express.static(resolveDistPath('ysyx'))
+		express.static(resolveDistPath('ysyx')),
+		// Serve index.html
+		async (req, res, next) => {
+			try {
+				return await new Promise((resolve, reject) => {
+					res.sendFile(
+						'index.html',
+						{ root: resolveDistPath('ysyx') },
+						e => {
+							if (e instanceof Error) return reject(e)
+							resolve()
+						})
+				})
+			} catch (e) {
+				logger.error('Cannot find index.html for root PWA')
+				return next()
+			}
+		}
 	))
 	// DOCS
 	.use(vhost(
