@@ -20,7 +20,7 @@ new Test('create appData')
 	.expect(true)
 new Test('insert appData')
 	.run(async () => {
-		return await appData.store({ msg: 'Test app message' }, { user, appID })
+		return (await appData.store({ msg: 'Test app message' }, { user, appID })).acknowledged
 	})
 	.expect(true)
 new Test('load appData')
@@ -30,7 +30,7 @@ new Test('load appData')
 	.expect('Test app message')
 new Test('update appData')
 	.run(async () => {
-		return await appData.update({ msg:'Updated app message' }, { user, appID })
+		return (await appData.update({ msg:'Updated app message' }, { user, appID })).acknowledged
 	})
 	.expect(true)
 new Test('load appData after updating')
@@ -40,7 +40,7 @@ new Test('load appData after updating')
 	.expect('Updated app message')
 new Test('delete appData')
 	.run(async () => {
-		return await appData.delete({ user, appID })
+		return (await appData.delete({ user, appID })).acknowledged
 	})
 	.expect(true)
 let fileID = 'testFile'
@@ -56,7 +56,7 @@ new Test('create AppDataWithFs')
 new Test('insert a file')
 	.run(async () => {
 		fs.writeFileSync(`${PROJECT_ROOT}/tmp/${fileID}`, text)
-		return await appData.store({ msg: 'Test file app message', cTime: new Date().getTime(), temp: true, for: 'test', fileID }, { user, appID })
+		return (await appData.store({ msg: 'Test file app message', cTime: new Date().getTime(), temp: true, for: 'test', fileID }, { user, appID })).acknowledged
 	})
 	.expect(true)
 new Test('acquireFile')
@@ -71,7 +71,7 @@ new Test('loadFile')
 	.expect(text)
 new Test('deleteFile')
 	.run(async () => {
-		return (await appData.deleteFile({ user, appID }))
+		return (await appData.deleteFile({ user, appID })).acknowledged
 	})
 	.expect(true)
 new Test('acquireFile after delete')
