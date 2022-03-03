@@ -8,20 +8,23 @@ A new session will be created for the user who has successfully logged in.
 
 contained properties:
 
+
 + `userID`: String
 
-    The userID filled in by the user when registering.
+    unique identifier for user
+    regex: /^[a-zA-Z][a-zA-Z0-9\-_]{4,15}$/
 
 + `mail`: String
 
-    The mail filled in by the user when registering.
+    unique identifier for user
+    Regex: /^\w+(\w+|\.|-)*\w+@([\w\-_]+\.)+[a-zA-Z]{1,3}$/
 
-    At least one of userID and mail is not null.
-    They are used to locate a existing user.
+At least one of userID and mail is not null.
+They are used to locate an existing user.
 
 + `password`: String
 
-The password filled in by the user when registering.
+    The password filled in by the user when registering.
 
 ## `login` output 
 
@@ -98,6 +101,7 @@ contained properties:
 + `mail`: String
 
     not null
+    unique identifier for user
     Real email address provided by user.
     Encoding: base64
     When transferred to utf-8, it can match Regex: /^\w+(\w+|\.|-)*\w+@([\w\-_]+\.)+[a-zA-Z]{1,3}$/
