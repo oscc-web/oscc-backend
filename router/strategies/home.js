@@ -56,8 +56,19 @@ const server = express()
 			res.redirect('/')
 		}
 	)
-	.get('/register', (req, res, next) => {
-		res.redirect('/')
+	.get('/register', async (req, res, next) => {
+		if (!req.query.mail || !req.query.token){
+			next()
+		} else {
+			let { mail, token } = req.query
+			mail = Buffer.from(mail, 'base64').toString()
+			let content = await appData.load({ mail, appID: appData.appID })
+			if (!content || content.token !== token) {
+				logger.errAcc(`token <${token}> cannot match the one bound to the mail <${mail}> in the database`)
+				return res.send({ valid:false, msg:'Invalid token' })
+			}
+			return res.redirect('/')
+		} 
 	})
 	.post('/register',
 		async (req, res, next) => {
@@ -113,13 +124,6 @@ const server = express()
 					logger.info(`Insert token<${token}> and mail<${mail}> Error`)
 					return res.sendStatus(500)
 				} 
-			} else if (action === 'VALIDATE_TOKEN') {
-				let content = await appData.load({ mail, appID: appData.appID })
-				if (!content || content.token !== token) {
-					logger.errAcc(`token <${token}> cannot match the one bound to the mail <${mail}> in the database`)
-					return res.send({ valid:false, msg:'Invalid token' })
-				}
-				return res.redirect('/')
 			} else if (action==='VALIDATE_USER_ID') {
 				if (!userID || !(typeof userID === 'string') || !IDRegex.test(userID)) {
 					logger.warn('Invalid userID')
