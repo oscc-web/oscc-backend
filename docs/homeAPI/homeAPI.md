@@ -53,15 +53,6 @@ Method POST and GET will be accepted.
 
 ## `register` with `GET` method
 
-+ `url contains query string`: 
-
-    Query string contains two params: `token` and `mail`(base64)
-    Token and mail will be checked if matched in database.
-    Matched: redirect to register form page
-    Not matched: returns { valid: false, msg: String }
-
-+ `url does not contain query string`: 
-
     next()
 
 ## `register` with `POST` method
@@ -81,6 +72,12 @@ contained properties:
         Check if userID is valid or registered
         If valid, returns {valid: true}
         If not, returns {valid:false, msg: String}
+
+    + `VALIDATE_TOKEN`:
+
+        Token and mail will be checked if matched in database.
+        Matched: returns {valid: true}
+        Not matched: returns { valid: false, msg: String }
 
     + `REGISTER`
  

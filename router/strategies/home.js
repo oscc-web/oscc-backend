@@ -62,20 +62,12 @@ const server = express()
 	.get('/register', async (req, res, next) => {
 		if (!req.query.mail || !req.query.token){
 			next()
-		} else {
-			let { mail, token } = req.query
-			mail = Buffer.from(mail, 'base64').toString()
-			let validateTokenResult = await validateToken(mail, token)
-			if (!validateTokenResult.valid) {
-				return res.json(validateTokenResult)
-			}
-			return res.redirect('/')
 		}
 	})
 	.post('/register',
 		async (req, res, next) => {
 			/**
-			* @type {{action: 'VALIDATE_MAIL' | 'VALIDATE_USER_ID' | 'REGISTER', mail: String, userID: String, name: String, password: String, token: String, OAuthTokens: Object}}
+			* @type {{action: 'VALIDATE_MAIL' | 'VALIDATE_TOKEN' | 'VALIDATE_USER_ID' | 'REGISTER', mail: String, userID: String, name: String, password: String, token: String, OAuthTokens: Object}}
 			*/
 			let payload = req.body
 			if (!payload || typeof payload !== 'object') {
@@ -124,6 +116,10 @@ const server = express()
 					logger.info(`Insert token<${token}> and mail<${mail}> Error`)
 					return res.sendStatus(500)
 				} 
+			} else if (action==='VALIDATE_TOKEN'){
+				mail = Buffer.from(mail, 'base64').toString()
+				let validateTokenResult = await validateToken(mail, token)
+				return res.json(validateTokenResult)
 			} else if (action==='VALIDATE_USER_ID') {
 				let validateUserIDResult = await validateUserID(userID)
 				return res.json(validateUserIDResult)
@@ -136,13 +132,6 @@ const server = express()
 				let validateUserIDResult = await validateUserID(userID)
 				if (!validateUserIDResult.valid){
 					return res.json(validateUserIDResult)
-				}
-				if (!mail || !(typeof mail === 'string') || !mailRegex.test(mail)) {
-					logger.warn('Invalid mail')
-					return res.json({ mail: false, msg: 'Invalid mail' })
-				} if (await User.locate(mail)) {
-					logger.verbose(`mail: <${mail}> has already been registered`)
-					return res.json({ valid: false, msg: 'userID has already been registered' })
 				}
 				if (!name || !(typeof name === 'string') || !password || !(typeof password === 'string')) {
 					logger.warn('Name and password must be strings')
