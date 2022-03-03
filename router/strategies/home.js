@@ -41,7 +41,7 @@ const server = express()
 						origin: req.origin
 					}
 				).writeToken(res)
-				return res.json({ login: true, userInfo: user.infoString })
+				return res.json({ login: true, userInfo: JSON.stringify(user.info) })
 			} else {				
 				logger.errAcc(`Failed login attempt for ${user}`)
 				return res.json({ login: false })
