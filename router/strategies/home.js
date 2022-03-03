@@ -7,13 +7,13 @@ import http from 'http'
 import { AppData } from '../../lib/appData.js'
 import { seed } from '../../utils/crypto.js'
 // Announce express server instance
-/**
- * @type {import('express').Express}
- */
 init(import.meta)
 let appData = new AppData()
 let IDRegex = /^[a-zA-Z][a-zA-Z0-9\-_]{4,15}$/,
 	mailRegex = /^\w+(\w+|\.|-)*\w+@([\w\-_]+\.)+[a-zA-Z]{1,3}$/
+/**
+ * @type {import('express').Express}
+ */
 const server = express()
 	.use(bodyParser.json())
 	.post('/login',
@@ -75,7 +75,7 @@ const server = express()
 	.post('/register',
 		async (req, res, next) => {
 			/**
-			* @type {{action: 'VALIDATE_MAIL' | 'VALIDATE_TOKEN' | 'VALIDATE_USER_ID' | 'REGISTER', mail: String, userID: String, name: String, password: String, token: String, OAuthTokens: Object}}
+			* @type {{action: 'VALIDATE_MAIL' | 'VALIDATE_USER_ID' | 'REGISTER', mail: String, userID: String, name: String, password: String, token: String, OAuthTokens: Object}}
 			*/
 			let payload = req.body
 			if (!payload || typeof payload !== 'object') {
@@ -153,7 +153,7 @@ const server = express()
 					.update()
 					.then(async() => {
 						user.password = password
-						res.json({ register: true })
+						res.json({ valid: true })
 						let mailerReq = http.request(
 							{
 								hostname: '127.0.0.1',
@@ -184,18 +184,6 @@ const server = express()
 	)
 // Expose handle function as default export
 export default (req, res, next) => server.handle(req, res, next)
-async function validateMail(mail) {
-	if (!mail || !(typeof mail === 'string') || !mailRegex.test(mail)) {
-		logger.warn('Invalid mail')
-		return { valid: false, msg: 'Invalid mail' }
-	}
-	let query = await appData.load({ mail, appID: appData.appID })
-	if (query || (await User.locate(mail)) ){ 
-		logger.verbose(`mail: <${mail}> has already been registered`)
-		return { valid: false, msg: 'Mail has been registered' }
-	}
-	return { valid: true }
-}
 async function validateUserID (userID) {
 	if (!userID || !(typeof userID === 'string') || !IDRegex.test(userID)) {
 		logger.warn('Invalid userID')
