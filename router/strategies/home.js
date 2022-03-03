@@ -11,6 +11,8 @@ import { seed } from '../../utils/crypto.js'
  * @type {import('express').Express}
  */
 let appData = new AppData()
+let IDRegex = /^[a-zA-Z][a-zA-Z0-9\-_]{4,15}$/,
+	mailRegex = /^\w+(\w+|\.|-)*\w+@([\w\-_]+\.)+[a-zA-Z]{1,3}$/
 const server = express()
 	.use(bodyParser.json())
 	.post('/login',
@@ -62,13 +64,12 @@ const server = express()
 		} else {
 			let { mail, token } = req.query
 			mail = Buffer.from(mail, 'base64').toString()
-			let content = await appData.load({ mail, appID: appData.appID })
-			if (!content || content.token !== token) {
-				logger.errAcc(`token <${token}> cannot match the one bound to the mail <${mail}> in the database`)
-				return res.send({ valid:false, msg:'Invalid token' })
+			let validateTokenResult = await validateToken(mail, token)
+			if (!validateTokenResult.valid) {
+				return res.json(validateTokenResult)
 			}
 			return res.redirect('/')
-		} 
+		}
 	})
 	.post('/register',
 		async (req, res, next) => {
@@ -79,7 +80,7 @@ const server = express()
 			if (!payload || typeof payload !== 'object') {
 				res.sendStatus(400)
 			}
-			const { 
+			let { 
 				action,
 				userID,
 				name,
@@ -87,21 +88,19 @@ const server = express()
 				password,
 				token,
 				OAuthTokens } = payload
-			let IDRegex = /^[a-zA-Z][a-zA-Z0-9\-_]{4,15}$/,
-				mailRegex = /^\w+(\w+|\.|-)*\w+@([\w\-_]+\.)+[a-zA-Z]{1,3}$/
 			// check if token exists
 			if (action === 'VALIDATE_MAIL') {
 				if (!mail || !(typeof mail === 'string') || !mailRegex.test(mail)) {
 					logger.warn('Invalid mail')
 					return res.json({ valid: false, msg: 'Invalid mail' })
 				}
-				let query = await appData.load({ mail, appID: appData.appID }),
-					registerToken = seed(6)
+				let query = await appData.load({ mail, appID: appData.appID })
 				if (query || (await User.locate(mail)) ){ 
 					logger.verbose(`mail: <${mail}> has already been registered`)
 					return res.json({ valid: false, msg: 'Mail has been registered' })
 				}
-				let	result = await appData.store({ token: registerToken }, { mail, appID: appData.appID })
+				let	registerToken = seed(6),
+					result = await appData.store({ token: registerToken }, { mail, appID: appData.appID })
 				if (result?.acknowledged) {
 					let mailerReq = http.request(
 						{
@@ -125,36 +124,24 @@ const server = express()
 					return res.sendStatus(500)
 				} 
 			} else if (action==='VALIDATE_USER_ID') {
-				if (!userID || !(typeof userID === 'string') || !IDRegex.test(userID)) {
-					logger.warn('Invalid userID')
-					return res.json({ valid: false, msg: 'Invalid userID' })
-				}
-				if (await User.locate(userID)) {
-					logger.verbose(`userID: <${userID}> has already been registered`)
-					return res.json({ valid: false, msg: 'userID has already been registered' })
-				}
-				return res.json({ valid: true })
+				let validateUserIDResult = await validateUserID(userID)
+				return res.json(validateUserIDResult)
 			} else if (action === 'REGISTER') {
-				let content = await appData.load({ mail, appID: appData.appID })
-				if (!content || content.token !== token) {
-					logger.errAcc(`token <${token}> cannot match the one bound to the mail <${mail}> in the database`)
-					return res.send({ valid:false, msg:'Invalid token' })
+				mail = Buffer.from(mail, 'base64').toString()
+				let validateTokenResult = await validateToken(mail, token)
+				if (!validateTokenResult.valid) {
+					return res.json(validateTokenResult)
 				}
-				if (!userID || !(typeof userID === 'string') || !IDRegex.test(userID)) {
-					logger.warn('Invalid userID')
-					return res.json({ valid: false, msg: 'Invalid userID' })
-				}
-				if (await User.locate(userID)) {
-					logger.verbose(`userID: <${userID}> has already been registered`)
-					return res.json({ valid: false, msg: 'userID has already been registered' })
+				let validateUserIDResult = await validateUserID(userID)
+				if (!validateUserIDResult.valid){
+					return res.json(validateUserIDResult)
 				}
 				if (!mail || !(typeof mail === 'string') || !mailRegex.test(mail)) {
 					logger.warn('Invalid mail')
-					return res.json({ register: false, msg: 'Invalid mail' })
-				}
-				if (await User.locate(mail)) {
+					return res.json({ mail: false, msg: 'Invalid mail' })
+				} if (await User.locate(mail)) {
 					logger.verbose(`mail: <${mail}> has already been registered`)
-					return res.json({ register: false, msg: 'mail has already been registered' })
+					return res.json({ valid: false, msg: 'userID has already been registered' })
 				}
 				if (!name || !(typeof name === 'string') || !password || !(typeof password === 'string')) {
 					logger.warn('Name and password must be strings')
@@ -196,3 +183,34 @@ const server = express()
 	)
 // Expose handle function as default export
 export default (req, res, next) => server.handle(req, res, next)
+async function validateMail(mail) {
+	if (!mail || !(typeof mail === 'string') || !mailRegex.test(mail)) {
+		logger.warn('Invalid mail')
+		return { valid: false, msg: 'Invalid mail' }
+	}
+	let query = await appData.load({ mail, appID: appData.appID })
+	if (query || (await User.locate(mail)) ){ 
+		logger.verbose(`mail: <${mail}> has already been registered`)
+		return { valid: false, msg: 'Mail has been registered' }
+	}
+	return { valid: true }
+}
+async function validateUserID (userID) {
+	if (!userID || !(typeof userID === 'string') || !IDRegex.test(userID)) {
+		logger.warn('Invalid userID')
+		return { valid: false, msg: 'Invalid userID' }
+	}
+	if (await User.locate(userID)) {
+		logger.verbose(`userID: <${userID}> has already been registered`)
+		return { valid: false, msg: 'userID has already been registered' }
+	}
+	return { valid: true }
+}
+async function validateToken (mail, token) {
+	let content = await appData.load({ mail, appID: appData.appID })
+	if (!content || content.token !== token) {
+		logger.errAcc(`token <${token}> cannot match the one bound to the mail <${mail}> in the database`)
+		return { valid: false, msg: 'Invalid token' }
+	}
+	return { valid: true }
+}
