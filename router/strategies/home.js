@@ -2,7 +2,7 @@ import express from 'express'
 import bodyParser from 'body-parser'
 import Session, { SESSION_TOKEN_NAME } from '../../lib/session.js'
 import User from '../../lib/user.js'
-import { logger, config } from '../../lib/env.js'
+import { logger, config, init } from '../../lib/env.js'
 import http from 'http'
 import { AppData } from '../../lib/appData.js'
 import { seed } from '../../utils/crypto.js'
@@ -10,6 +10,7 @@ import { seed } from '../../utils/crypto.js'
 /**
  * @type {import('express').Express}
  */
+init(import.meta)
 let appData = new AppData()
 let IDRegex = /^[a-zA-Z][a-zA-Z0-9\-_]{4,15}$/,
 	mailRegex = /^\w+(\w+|\.|-)*\w+@([\w\-_]+\.)+[a-zA-Z]{1,3}$/
