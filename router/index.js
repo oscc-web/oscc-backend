@@ -102,6 +102,7 @@ express()
 				req.injectCookies({
 					token: jsonwebtoken.sign(Object.assign({ id: session.userID }, userInfo), secret, { header })
 				})
+				next()
 			},
 			// Forward processed traffic to real NodeBB service
 			proxy(req => ({
