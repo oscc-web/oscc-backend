@@ -1,7 +1,7 @@
 // Imports
 import { init, resolveDistPath, config, logger, Rx } from '../lib/env.js'
 import express from 'express'
-import fs from 'fs'
+import jsonwebtoken from 'jsonwebtoken'
 // Middleware
 import vhost from './middleware/vhost.js'
 import proxy from './middleware/proxy.js'
@@ -88,6 +88,21 @@ express()
 		express().disable('x-powered-by').use(
 			// Session preprocessor
 			Session.preprocessor,
+			async (req, res, next) => {
+				const session = await Session.locate(req)
+				const header = {
+					'alg': 'HS256',
+					'typ': 'JWT'
+				}
+				const userInfo = JSON.parse(session.userInfoString)
+				const secret = config.nodebb.secret
+				if (!(session instanceof Session)) {
+					return next()
+				}
+				req.injectCookies({
+					token: jsonwebtoken.sign(Object.assign({ id: session.userID }, userInfo), secret, { header })
+				})
+			},
 			// Forward processed traffic to real NodeBB service
 			proxy(req => ({
 				hostname: '127.0.0.1',
