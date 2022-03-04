@@ -55,8 +55,10 @@ const server = express()
 				logger.access(`userID: ${session.userID} logout`)
 				session.drop()
 			} 
-			res.cookie(SESSION_TOKEN_NAME, '', { expires: new Date(0) })
-			res.redirect('/')
+			res
+				.cookie(SESSION_TOKEN_NAME, '', { expires: new Date(0) })
+				.writeHead(200)
+				.end()
 		}
 	)
 	.get('/register', async (req, res, next) => {
@@ -67,7 +69,7 @@ const server = express()
 	.post('/register',
 		async (req, res, next) => {
 			/**
-			* @type {{action: 'VALIDATE_MAIL' | 'VALIDATE_TOKEN' | 'VALIDATE_USER_ID' | 'REGISTER', mail: String, userID: String, name: String, password: String, token: String, OAuthTokens: Object}}
+			* @type {{ action: 'VALIDATE_MAIL' | 'VALIDATE_TOKEN' | 'VALIDATE_USER_ID' | 'REGISTER', mail: String, userID: String, name: String, password: String, token: String }}
 			*/
 			let payload = req.body
 			if (!payload || typeof payload !== 'object') {
@@ -79,8 +81,8 @@ const server = express()
 				name,
 				mail,
 				password,
-				token,
-				OAuthTokens } = payload
+				token
+			} = payload
 			// check if token exists
 			if (action === 'VALIDATE_MAIL') {
 				if (!mail || !(typeof mail === 'string') || !mailRegex.test(mail)) {
@@ -117,14 +119,12 @@ const server = express()
 					return res.sendStatus(500)
 				} 
 			} else if (action==='VALIDATE_TOKEN'){
-				mail = Buffer.from(mail, 'base64').toString()
 				let validateTokenResult = await validateToken(mail, token)
 				return res.json(validateTokenResult)
 			} else if (action==='VALIDATE_USER_ID') {
 				let validateUserIDResult = await validateUserID(userID)
 				return res.json(validateUserIDResult)
 			} else if (action === 'REGISTER') {
-				mail = Buffer.from(mail, 'base64').toString()
 				let validateTokenResult = await validateToken(mail, token)
 				if (!validateTokenResult.valid) {
 					return res.json(validateTokenResult)
@@ -134,10 +134,10 @@ const server = express()
 					return res.json(validateUserIDResult)
 				}
 				if (!name || !(typeof name === 'string') || !password || !(typeof password === 'string')) {
-					logger.warn('Name and password must be strings')
+					logger.errAcc('Name and password must be strings')
 					return res.json({ register: false, msg: 'Name and password must be strings' })
 				}
-				let user = new User({ userID, name, mail, OAuthTokens })
+				let user = new User({ userID, name, mail })
 				await user
 					.update()
 					.then(async() => {

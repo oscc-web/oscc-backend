@@ -8,19 +8,10 @@ A new session will be created for the user who has successfully logged in.
 
 contained properties:
 
-
-+ `userID`: String
-
-    unique identifier for user
-    regex: /^[a-zA-Z][a-zA-Z0-9\-_]{4,15}$/
-
-+ `mail`: String
-
-    unique identifier for user
-    Regex: /^\w+(\w+|\.|-)*\w+@([\w\-_]+\.)+[a-zA-Z]{1,3}$/
-
-At least one of userID and mail is not null.
-They are used to locate an existing user.
++ `id` : String
+    userID or mail 
+    userID: regex: /^[a-zA-Z][a-zA-Z0-9\-_]{4,15}$/
+    mail: regex: /^\w+(\w+|\.|-)*\w+@([\w\-_]+\.)+[a-zA-Z]{1,3}$/
 
 + `password`: String
 
@@ -44,7 +35,6 @@ They are used to locate an existing user.
 `/logout` is the interface for existing users logout.
 Method GET will be accepted.
 The session located by the request will be dropped.
-redirect to index
 
 # `register` api description
 
@@ -53,13 +43,13 @@ Method POST and GET will be accepted.
 
 ## `register` with `GET` method
 
-    next()
+    Jump to home page
 
 ## `register` with `POST` method
 
 contained properties:
 
-+ `action`: String 'VALIDATE_MAIL' | 'VALIDATE_USER_ID' | 'REGISTER'
++ `action`: String 'VALIDATE_MAIL' | 'VALIDATE_USER_ID' | 'VALIDATE_TOKEN' | 'REGISTER'
 
     + `VALIDATE_MAIL`: 
 
@@ -80,14 +70,16 @@ contained properties:
         Not matched: returns { valid: false, msg: String }
 
     + `REGISTER`
- 
-        Firstly, check if token is valid
-        If not, returns {valid:false, msg: String}
-        Secondly, check if mail and userID are valid or registered
-        If not, returns {valid:false, msg: String}
-        Then, check if name is valid
-        If not, returns {valid:false, msg: String}
-        Last, create a User instance and registration success email will be sent to given mail. AppData with mail and token will be deleted.Returns {valid: true}
+
+        A new user will be created according to userID, mail, name, password
+
+        If successfully registered, returns {valid: true}
+        If not, returns {valid: false, msg: String}
+        conditions: 
+        + `token and mail do not match` returns { valid: false, msg: 'Invalid token' }
+        + `invalid userID` returns {valid: false, msg: 'Invalid userID'}
+        + `repeated userID`  returns {valid: false, msg: 'userID has already been registered'}
+        + `invalid name and password` returns {valid: false, msg: 'Name and password must be strings'}
 
 + `userID`: String
 
@@ -100,8 +92,7 @@ contained properties:
     not null
     unique identifier for user
     Real email address provided by user.
-    Encoding: base64
-    When transferred to utf-8, it can match Regex: /^\w+(\w+|\.|-)*\w+@([\w\-_]+\.)+[a-zA-Z]{1,3}$/
+    regex: /^\w+(\w+|\.|-)*\w+@([\w\-_]+\.)+[a-zA-Z]{1,3}$/
 
 + `name`: String
 
@@ -117,17 +108,3 @@ contained properties:
 
     User login password
     not null
-
-+ `OAuthTokens`: Object
-
-    The token returned when the third party logs in
-    key: third party name
-    value: token
-
-    Example:
-
-    ```js
-        'OAuthTokens' :{
-            'github': 'QNH3Q00CMTRNOVJO4GID8SYM'
-        }
-    ```
