@@ -94,7 +94,24 @@ express()
 					'alg': 'HS256',
 					'typ': 'JWT'
 				}
-				const userInfo = JSON.parse(session.userInfoString)
+				let userInfo = JSON.parse(session.userInfoString)
+				userInfo.groups = []
+				for (const privilege of session.user.groups) {
+					if (FORUM_ADMIN === privilege) {
+						userInfo.groups.push('administrators')
+					}
+					else if (FORUM_MAINTAINER === privilege) {
+						userInfo.groups.push('Global Moderators')
+					}
+					else if (FORUM_CREATE_POST === privilege) {
+						userInfo.groups.push('members')
+					}
+					else if (FORUM_COMMENT_AND_VOTE_POST === privilege) {
+						userInfo.groups.push('guests')
+					} else {
+						userInfo.groups.push(privilege)
+					}
+				}
 				const secret = config.nodebb.secret
 				if (!(session instanceof Session)) {
 					return next()
