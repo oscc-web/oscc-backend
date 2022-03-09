@@ -27,7 +27,7 @@ const server = express()
 				password,
 			} = payload
 			let user = await User.locate(userID)
-			if (!(user instanceof User)){
+			if (!(user instanceof User)) {
 				logger.errAcc(`Unable to locate user with userID: ${userID}`)
 				return res.json({ login: false })
 			}
@@ -41,7 +41,7 @@ const server = express()
 					}
 				).writeToken(res)
 				return res.json({ login: true, userInfo: JSON.stringify(user.info) })
-			} else {				
+			} else {
 				logger.errAcc(`Failed login attempt for ${user}`)
 				return res.json({ login: false })
 			}
@@ -53,7 +53,7 @@ const server = express()
 			if (session instanceof Session) {
 				logger.access(`userID: ${session.userID} logout`)
 				session.drop()
-			} 
+			}
 			res
 				.cookie(SESSION_TOKEN_NAME, '', { expires: new Date(0) })
 				.writeHead(200)
@@ -61,7 +61,7 @@ const server = express()
 		}
 	)
 	.get('/register', async (req, res, next) => {
-		if (!req.query.mail || !req.query.token){
+		if (!req.query.mail || !req.query.token) {
 			next()
 		}
 	})
@@ -74,7 +74,7 @@ const server = express()
 			if (!payload || typeof payload !== 'object') {
 				res.sendStatus(400)
 			}
-			let { 
+			let {
 				action,
 				userID,
 				name,
@@ -88,13 +88,13 @@ const server = express()
 					logger.warn('Invalid mail')
 					return res.json({ valid: false, msg: 'Invalid mail' })
 				}
-				let query = await appData.load({ mail })
-				if (query || (await User.locate(mail)) ){ 
+				let query = await appData.load({ mail, action: 'validate-mail' })
+				if (query || (await User.locate(mail))) {
 					logger.verbose(`mail: <${mail}> has already been registered`)
 					return res.json({ valid: false, msg: 'Mail has been registered' })
 				}
-				let	registerToken = seed(6),
-					result = await appData.store({ token: registerToken }, { mail })
+				let registerToken = seed(6),
+					result = await appData.store({ token: registerToken }, { mail, action: 'validate-mail' })
 				if (result?.acknowledged) {
 					let mailerReq = http.request(
 						{
@@ -109,18 +109,18 @@ const server = express()
 					mailerReq.write(JSON.stringify({
 						template: 'validateEmail',
 						to: mail,
-						args:{ link: `ysyx.org/register?token=${registerToken}&mail=${Buffer.from(mail).toString('base64')}` }
+						args: { link: `ysyx.org/register?token=${registerToken}&mail=${Buffer.from(mail).toString('base64')}` }
 					}))
 					mailerReq.end()
 					return res.send({ valid: true })
 				} else {
 					logger.info(`Insert token<${token}> and mail<${mail}> Error`)
 					return res.sendStatus(500)
-				} 
-			} else if (action==='VALIDATE_TOKEN'){
+				}
+			} else if (action === 'VALIDATE_TOKEN') {
 				let validateTokenResult = await validateToken(mail, token)
 				return res.json(validateTokenResult)
-			} else if (action==='VALIDATE_USER_ID') {
+			} else if (action === 'VALIDATE_USER_ID') {
 				let validateUserIDResult = await validateUserID(userID)
 				return res.json(validateUserIDResult)
 			} else if (action === 'REGISTER') {
@@ -129,7 +129,7 @@ const server = express()
 					return res.json(validateTokenResult)
 				}
 				let validateUserIDResult = await validateUserID(userID)
-				if (!validateUserIDResult.valid){
+				if (!validateUserIDResult.valid) {
 					return res.json(validateUserIDResult)
 				}
 				if (!name || !(typeof name === 'string') || !password || !(typeof password === 'string')) {
@@ -139,7 +139,7 @@ const server = express()
 				let user = new User({ userID, name, mail })
 				await user
 					.update()
-					.then(async() => {
+					.then(async () => {
 						user.password = password
 						res.json({ valid: true })
 						let mailerReq = http.request(
@@ -155,10 +155,10 @@ const server = express()
 						mailerReq.write(JSON.stringify({
 							template: 'registerEmail',
 							to: mail,
-							args:{}
+							args: {}
 						}))
 						mailerReq.end()
-						await appData.delete({ mail })
+						await appData.delete({ mail, action: 'validate-mail'})
 						logger.access(`User ${user} successfully registered`)
 					})
 					.catch(e => {
@@ -172,7 +172,7 @@ const server = express()
 	)
 // Expose handle function as default export
 export default (req, res, next) => server.handle(req, res, next)
-async function validateUserID (userID) {
+async function validateUserID(userID) {
 	if (!userID || !(typeof userID === 'string') || !IDRegex.test(userID)) {
 		logger.errAcc(`Invalid userID: ${userID}`)
 		return { valid: false, msg: 'Invalid userID' }
@@ -183,8 +183,8 @@ async function validateUserID (userID) {
 	}
 	return { valid: true }
 }
-async function validateToken (mail, token) {
-	let content = await appData.load({ mail })
+async function validateToken(mail, token) {
+	let content = await appData.load({ mail, action: 'validate-mail' })
 	if (!content || content.token !== token) {
 		logger.errAcc(`token <${token}> cannot match the one bound to the mail <${mail}> in the database`)
 		return { valid: false, msg: 'Invalid token' }
