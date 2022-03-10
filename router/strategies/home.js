@@ -19,7 +19,7 @@ const server = express()
 		async (req, res, next) => {
 			let payload = req.body
 			if (!payload || typeof payload !== 'object') {
-				logger.warn('Input is not an object')
+				logger.errAcc(`Input: ${payload} is not an object`)
 				res.sendStatus(400)
 			}
 			let {
@@ -28,7 +28,7 @@ const server = express()
 			} = payload
 			let user = await User.locate(userID)
 			if (!(user instanceof User)) {
-				logger.errAcc(`Unable to locate user with userID: ${userID}`)
+				logger.errAcc(`Unable to locate user with userID: <${userID}>`)
 				return res.json({ login: false })
 			}
 			if (await user.login(password)) {
@@ -51,7 +51,7 @@ const server = express()
 		async (req, res, next) => {
 			let session = await Session.locate(req)
 			if (session instanceof Session) {
-				logger.access(`userID: ${session.userID} logout`)
+				logger.access(`userID: <${session.userID}> logout`)
 				session.drop()
 			}
 			res
@@ -60,11 +60,6 @@ const server = express()
 				.end()
 		}
 	)
-	.get('/register', async (req, res, next) => {
-		if (!req.query.mail || !req.query.token) {
-			next()
-		}
-	})
 	.post('/register',
 		async (req, res, next) => {
 			/**
@@ -85,7 +80,7 @@ const server = express()
 			// check if token exists
 			if (action === 'VALIDATE_MAIL') {
 				if (!mail || !(typeof mail === 'string') || !mailRegex.test(mail)) {
-					logger.warn('Invalid mail')
+					logger.errAcc(`Invalid mail: <${mail}>`)
 					return res.json({ valid: false, msg: 'Invalid mail' })
 				}
 				let query = await appData.load({ mail, action: 'validate-mail' })
@@ -118,11 +113,9 @@ const server = express()
 					return res.sendStatus(500)
 				}
 			} else if (action === 'VALIDATE_TOKEN') {
-				let validateTokenResult = await validateToken(mail, token)
-				return res.json(validateTokenResult)
+				return validateToken(mail, token).then(result => res.json(result))
 			} else if (action === 'VALIDATE_USER_ID') {
-				let validateUserIDResult = await validateUserID(userID)
-				return res.json(validateUserIDResult)
+				return validateUserID(userID).then(result => res.json(result))
 			} else if (action === 'REGISTER') {
 				let validateTokenResult = await validateToken(mail, token)
 				if (!validateTokenResult.valid) {
@@ -133,7 +126,7 @@ const server = express()
 					return res.json(validateUserIDResult)
 				}
 				if (!name || !(typeof name === 'string') || !password || !(typeof password === 'string')) {
-					logger.errAcc('Name and password must be strings')
+					logger.errAcc(`Name: <${name}> and password: <${password}> must be strings`)
 					return res.json({ register: false, msg: 'Name and password must be strings' })
 				}
 				let user = new User({ userID, name, mail })
@@ -162,11 +155,12 @@ const server = express()
 						logger.access(`User ${user} successfully registered`)
 					})
 					.catch(e => {
-						logger.error(`create user error: ${e.stack}`)
+						logger.info(`create user error: ${e.stack}`)
 						res.sendStatus(500)
 					})
 			} else {
-				logger.errAcc(`Unknown action provided ${action}`)
+				logger.errAcc(`Unknown action provided <${action}>`)
+				return res.sendStatus(404)
 			}
 		}
 	)
@@ -174,7 +168,7 @@ const server = express()
 export default (req, res, next) => server.handle(req, res, next)
 async function validateUserID(userID) {
 	if (!userID || !(typeof userID === 'string') || !IDRegex.test(userID)) {
-		logger.errAcc(`Invalid userID: ${userID}`)
+		logger.errAcc(`Invalid userID: <${userID}>`)
 		return { valid: false, msg: 'Invalid userID' }
 	}
 	if (await User.locate(userID)) {
