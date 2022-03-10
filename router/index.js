@@ -1,7 +1,7 @@
 // Imports
 import { init, resolveDistPath, config, logger, Rx } from '../lib/env.js'
 import express from 'express'
-import fs from 'fs'
+import jsonwebtoken from 'jsonwebtoken'
 // Middleware
 import vhost from './middleware/vhost.js'
 import proxy from './middleware/proxy.js'
@@ -88,6 +88,39 @@ express()
 		express().disable('x-powered-by').use(
 			// Session preprocessor
 			Session.preprocessor,
+			async (req, res, next) => {
+				const session = await Session.locate(req)
+				const header = {
+					'alg': 'HS256',
+					'typ': 'JWT'
+				}
+				let userInfo = JSON.parse(session.userInfoString)
+				userInfo.groups = []
+				for (const privilege of session.user.groups) {
+					if (FORUM_ADMIN === privilege) {
+						userInfo.groups.push('administrators')
+					}
+					else if (FORUM_MAINTAINER === privilege) {
+						userInfo.groups.push('Global Moderators')
+					}
+					else if (FORUM_CREATE_POST === privilege) {
+						userInfo.groups.push('members')
+					}
+					else if (FORUM_COMMENT_AND_VOTE_POST === privilege) {
+						userInfo.groups.push('guests')
+					} else {
+						userInfo.groups.push(privilege)
+					}
+				}
+				const secret = config.nodebb.secret
+				if (!(session instanceof Session)) {
+					return next()
+				}
+				req.injectCookies({
+					token: jsonwebtoken.sign(Object.assign({ id: session.userID }, userInfo), secret, { header })
+				})
+				next()
+			},
 			// Forward processed traffic to real NodeBB service
 			proxy(req => ({
 				hostname: '127.0.0.1',
