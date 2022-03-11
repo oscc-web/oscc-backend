@@ -82,31 +82,19 @@ const server = express()
 				if (!mail || !(typeof mail === 'string') || !mailRegex.test(mail)) {
 					logger.errAcc(`Invalid mail: <${mail}>`)
 					return res.json({ valid: false, msg: 'Invalid mail' })
-				}
-				let query = await appData.load({ mail, action: 'validate-mail' })
-				if (query || (await User.locate(mail))) {
+				}if (await User.locate(mail)) {
 					logger.verbose(`mail: <${mail}> has already been registered`)
 					return res.json({ valid: false, msg: 'Mail has been registered' })
+				}
+				let query = await appData.load({ mail, action: 'validate-mail' })
+				if (query) {
+					sendMail(mail, query.token)
+					return res.send({ valid: true })
 				}
 				let registerToken = seed(6),
 					result = await appData.store({ token: registerToken }, { mail, action: 'validate-mail' })
 				if (result?.acknowledged) {
-					let mailerReq = http.request(
-						{
-							hostname: '127.0.0.1',
-							port: config.port.mailer,
-							method: 'POST',
-							headers: {
-								'Content-Type': 'application/json',
-							}
-						}
-					)
-					mailerReq.write(JSON.stringify({
-						template: 'validateEmail',
-						to: mail,
-						args: { link: `ysyx.org/register?token=${registerToken}&mail=${Buffer.from(mail).toString('base64')}` }
-					}))
-					mailerReq.end()
+					sendMail(mail, registerToken)
 					return res.send({ valid: true })
 				} else {
 					logger.info(`Insert token<${token}> and mail<${mail}> Error`)
@@ -184,4 +172,22 @@ async function validateToken(mail, token) {
 		return { valid: false, msg: 'Invalid token' }
 	}
 	return { valid: true }
+}
+async function sendMail(mail, token){
+	let mailerReq = http.request(
+		{
+			hostname: '127.0.0.1',
+			port: config.port.mailer,
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+			}
+		}
+	)
+	mailerReq.write(JSON.stringify({
+		template: 'validateEmail',
+		to: mail,
+		args: { link: `ysyx.org/register?token=${token}&mail=${Buffer.from(mail).toString('base64')}` }
+	}))
+	mailerReq.end()
 }
