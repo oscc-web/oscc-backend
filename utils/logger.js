@@ -16,8 +16,7 @@ let levels = [
 ]
 addColors(Object.fromEntries(levels))
 levels = Object.fromEntries(levels.map(([lv], i) => [lv, i]))
-export default function create(identity, logOutputLevel = 'access') {
-	const IS_DEVELOPMENT_MODE = /^((dev(elopment)?)|debug|dbg)$/i.test(config.mode)
+export default function create(identity, IS_DEVELOPMENT_MODE, logOutputLevel = 'access') {
 	let serviceName = identity.replace(/modules\//g, '').replace(/\/\\/g, '.')
 	const logger = createLogger({
 		level: config?.logLevel

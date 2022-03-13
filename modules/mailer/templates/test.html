@@ -91,11 +91,11 @@
 		async function load(template = tpl, args) {
 			let
 				html = await fetch('./index.html')
-					.then(res => res.ok ? res.text() : ''),
+					.then(res => res.ok ? res.end() : ''),
 				indexCss = await fetch('./index.css')
-					.then(res => res.ok ? res.text() : ''),
+					.then(res => res.ok ? res.end() : ''),
 				templateHtml = await fetch(`./${template}.html`)
-					.then(res => res.ok ? res.text() : '')
+					.then(res => res.ok ? res.end() : '')
 					.then(text => text.replace(
 						/^-{3,}\n(?<content>(.*\n)*?)-{3,}/m,
 						(...args) => {
@@ -105,7 +105,7 @@
 						}
 					)),
 				templateCss = await fetch(`./${template}.css`)
-					.then(res => res.ok ? res.text() : ''),
+					.then(res => res.ok ? res.end() : ''),
 				src = html.replace(
 					/\{\{\s*(?<entry>\w+)\s*\}\}/g,
 					(...arg) => {

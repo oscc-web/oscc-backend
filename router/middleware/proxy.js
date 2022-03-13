@@ -21,7 +21,12 @@ export default function (rewrite) {
 	// Return express server
 	return function (req, res) {
 		// Apply custom request transform
-		const proxy = http.request(rewrite(req), next_res => {
+		const proxy = http.request({
+			path: req.url,
+			method: req.method,
+			headers: req.headers,
+			...rewrite(req)
+		}, next_res => {
 			res.writeHead(next_res.statusCode, next_res.headers)
 			next_res.pipe(res, {
 				end: true

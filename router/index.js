@@ -1,16 +1,20 @@
 // Imports
-import { init, resolveDistPath, config, logger, Rx } from '../lib/env.js'
+import { init, resolveDistPath, config, logger, Rx, IS_DEVELOPMENT_MODE } from '../lib/env.js'
 import express from 'express'
-import jsonwebtoken from 'jsonwebtoken'
 // Middleware
 import vhost from './middleware/vhost.js'
 import proxy from './middleware/proxy.js'
 import privileged from './middleware/privileged.js'
+import errorHandler from './middleware/errorHandler.js'
 // Strategies
 import home from './strategies/home.js'
+import forumPreprocessor from './strategies/forum.js'
 // Libraries
 import Session from '../lib/session.js'
 import { PRIV } from '../lib/privileges.js'
+import statusCode from '../lib/status.code.js'
+// Standard error handler
+
 // Extract related configs from user config
 const port = config?.port?.router || 8080
 // Environment setup
@@ -42,8 +46,18 @@ express()
 		/^ysyx.(org|cc|dev|local)$/i,
 		// Routing strategy
 		home,
-		// Static file server
-		express.static(resolveDistPath('ysyx')),
+		// Static server can be either a static dist or vite dev server
+		(IS_DEVELOPMENT_MODE && config.port.vite)
+			// Forward traffic to vite dev server
+			? (() => {
+				logger.info(`YSYX.ORG redirected to development port [${config.port.vite}]`)
+				return proxy(req => ({
+					hostname: '127.0.0.1',
+					port: config.port.vite
+				}))
+			})()
+			// Static file server
+			: express.static(resolveDistPath('ysyx')),
 		// Serve index.html
 		async (req, res, next) => {
 			try {
@@ -85,51 +99,12 @@ express()
 	// FORUM
 	.use(vhost(
 		/^forum.ysyx.(org|cc|dev|local)$/i,
-		express().disable('x-powered-by').use(
-			// Session preprocessor
-			Session.preprocessor,
-			async (req, res, next) => {
-				const session = await Session.locate(req)
-				const header = {
-					'alg': 'HS256',
-					'typ': 'JWT'
-				}
-				let userInfo = JSON.parse(session.userInfoString)
-				userInfo.groups = []
-				for (const privilege of session.user.groups) {
-					if (FORUM_ADMIN === privilege) {
-						userInfo.groups.push('administrators')
-					}
-					else if (FORUM_MAINTAINER === privilege) {
-						userInfo.groups.push('Global Moderators')
-					}
-					else if (FORUM_CREATE_POST === privilege) {
-						userInfo.groups.push('members')
-					}
-					else if (FORUM_COMMENT_AND_VOTE_POST === privilege) {
-						userInfo.groups.push('guests')
-					} else {
-						userInfo.groups.push(privilege)
-					}
-				}
-				const secret = config.nodebb.secret
-				if (!(session instanceof Session)) {
-					return next()
-				}
-				req.injectCookies({
-					token: jsonwebtoken.sign(Object.assign({ id: session.userID }, userInfo), secret, { header })
-				})
-				next()
-			},
-			// Forward processed traffic to real NodeBB service
-			proxy(req => ({
-				hostname: '127.0.0.1',
-				port: config?.port?.NodeBB || 4567,
-				path: req.url,
-				method: req.method,
-				headers: req.headers
-			}))
-		)
+		forumPreprocessor,
+		// Forward processed traffic to real NodeBB service
+		proxy(() => ({
+			hostname: '127.0.0.1',
+			port: config?.port?.NodeBB || 4567
+		}))
 	))
 	// API server
 	.use(vhost(
@@ -138,27 +113,18 @@ express()
 			// Session preprocessor
 			Session.preprocessor,
 			// Forward processed traffic to real NodeBB service
-			proxy(req => ({
+			proxy(() => ({
 				hostname: '127.0.0.1',
-				port: config?.port?.api || 8999,
-				path: req.url,
-				method: req.method,
-				headers: req.headers
+				port: config?.port?.api || 8999
 			}))
 		)
 	))
-	// Uncaught Request handler
+	// Uncaught request handler
 	.use((req, res) => {
-		res.status(404)
 		logger.errAcc(`Unable to handle request ${req.headers.host}${req.url} from ${req.origin}`)
-		// respond with html page
-		// if (req.accepts('html')) {
-		// res.render('404', { url: req.url })
-		// return
-		// }
-		// fallback to plain-text
-		// else
-		res.type('txt').send('404 Not found')
+		res.status(statusCode.ClientError.NotFound).end()
 	})
+	// Request error handler
+	.use(errorHandler)
 	// Open listening port
 	.listen(port, () => logger.info(`Service up and running at port ${port}`))

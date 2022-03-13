@@ -1,37 +1,36 @@
 import express from 'express'
 import bodyParser from 'body-parser'
-import Session, { SESSION_TOKEN_NAME } from '../../lib/session.js'
 import User from '../../lib/user.js'
-import { logger, config } from '../../lib/env.js'
 import http from 'http'
+import statusCode from '../../lib/status.code.js'
+import Session, { SESSION_TOKEN_NAME } from '../../lib/session.js'
+import { logger, config, Rx } from '../../lib/env.js'
 import { AppData } from '../../lib/appData.js'
 import { seed } from '../../utils/crypto.js'
-// Announce express server instance
-let appData = new AppData()
-let IDRegex = /^[a-zA-Z][a-zA-Z0-9\-_]{4,15}$/,
-	mailRegex = /^\w+(\w+|\.|-)*\w+@([\w\-_]+\.)+[a-zA-Z]{1,3}$/
+import errorHandler from '../middleware/errorHandler.js'
+// AppData for current scope
+let appData = new AppData('router/home')
 /**
- * @type {import('express').Express}
+ * Server instance
  */
 const server = express()
-	.use(bodyParser.json())
+	.use(bodyParser.json({ type: req => req.method === 'POST' }))
 	.post('/login',
 		async (req, res, next) => {
 			let payload = req.body
 			if (!payload || typeof payload !== 'object') {
 				logger.errAcc(`Input: ${payload} is not an object`)
-				res.sendStatus(400)
+				return res.status(statusCode.ClientError.BadRequest).end()
 			}
 			let {
-				userID,
+				login,
 				password,
 			} = payload
-			let user = await User.locate(userID)
+			let user = await User.locate(login)
 			if (!(user instanceof User)) {
-				logger.errAcc(`Unable to locate user with userID: <${userID}>`)
-				return res.json({ login: false })
+				logger.errAcc(`Unable to locate user with login <${login}>`)
 			}
-			if (await user.login(password)) {
+			else if (await user.login(password)) {
 				await new Session(
 					user,
 					{
@@ -43,11 +42,11 @@ const server = express()
 				return res.json({ login: true, userInfo: JSON.stringify(user.info) })
 			} else {
 				logger.errAcc(`Failed login attempt for ${user}`)
-				return res.json({ login: false })
 			}
+			return res.status(statusCode.ClientError.Unauthorized).end()
 		}
 	)
-	.get('/logout',
+	.post('/logout',
 		async (req, res, next) => {
 			let session = await Session.locate(req)
 			if (session instanceof Session) {
@@ -56,132 +55,141 @@ const server = express()
 			}
 			res
 				.cookie(SESSION_TOKEN_NAME, '', { expires: new Date(0) })
-				.writeHead(200)
+				.status(statusCode.Success.OK)
 				.end()
 		}
 	)
 	.post('/register',
-		async (req, res, next) => {
+		(req, res, next) => {
 			/**
-			* @type {{ action: 'VALIDATE_MAIL' | 'VALIDATE_TOKEN' | 'VALIDATE_USER_ID' | 'REGISTER', mail: String, userID: String, name: String, password: String, token: String }}
+			* @type {{ action: 'SEND_MAIL' | 'VALIDATE_TOKEN' | 'VALIDATE_USER_ID' | 'REGISTER', mail: String, userID: String, name: String, password: String, token: String }}
 			*/
 			let payload = req.body
+			console.log(req.body)
 			if (!payload || typeof payload !== 'object') {
 				res.sendStatus(400)
 			}
 			let {
 				action,
-				userID,
-				name,
 				mail,
-				password,
 				token
 			} = payload
+			// Convert mail to lower case
+			if (!mail || (typeof mail !== 'string') || !Rx.mail.test(mail)) {
+				logger.errAcc(`Invalid mail: <${mail}>`)
+				return res.status(statusCode.ClientError.BadRequest).end('[0] Bad mail')
+			}
+			mail = mail.toLowerCase()
 			// check if token exists
-			if (action === 'VALIDATE_MAIL') {
-				if (!mail || !(typeof mail === 'string') || !mailRegex.test(mail)) {
-					logger.errAcc(`Invalid mail: <${mail}>`)
-					return res.json({ valid: false, msg: 'Invalid mail' })
-				}
-				let query = await appData.load({ mail, action: 'validate-mail' })
-				if (query || (await User.locate(mail))) {
-					logger.verbose(`mail: <${mail}> has already been registered`)
-					return res.json({ valid: false, msg: 'Mail has been registered' })
-				}
-				let registerToken = seed(6),
-					result = await appData.store({ token: registerToken }, { mail, action: 'validate-mail' })
-				if (result?.acknowledged) {
-					let mailerReq = http.request(
-						{
-							hostname: '127.0.0.1',
-							port: config.port.mailer,
-							method: 'POST',
-							headers: {
-								'Content-Type': 'application/json',
-							}
+			switch (action) {
+				case 'SEND_MAIL':
+					(async () => {
+						if (await User.locate(mail)) {
+							logger.verbose(`mail <${mail}> has already been registered`)
+							return res.status(statusCode.ClientError.BadRequest).end('[1] Mail already used')
 						}
-					)
-					mailerReq.write(JSON.stringify({
-						template: 'validateEmail',
-						to: mail,
-						args: { link: `ysyx.org/register?token=${registerToken}&mail=${Buffer.from(mail).toString('base64')}` }
-					}))
-					mailerReq.end()
-					return res.send({ valid: true })
-				} else {
-					logger.info(`Insert token<${token}> and mail<${mail}> Error`)
-					return res.sendStatus(500)
-				}
-			} else if (action === 'VALIDATE_TOKEN') {
-				return validateToken(mail, token).then(result => res.json(result))
-			} else if (action === 'VALIDATE_USER_ID') {
-				return validateUserID(userID).then(result => res.json(result))
-			} else if (action === 'REGISTER') {
-				let validateTokenResult = await validateToken(mail, token)
-				if (!validateTokenResult.valid) {
-					return res.json(validateTokenResult)
-				}
-				let validateUserIDResult = await validateUserID(userID)
-				if (!validateUserIDResult.valid) {
-					return res.json(validateUserIDResult)
-				}
-				if (!name || !(typeof name === 'string') || !password || !(typeof password === 'string')) {
-					logger.errAcc(`Name: <${name}> and password: <${password}> must be strings`)
-					return res.json({ register: false, msg: 'Name and password must be strings' })
-				}
-				let user = new User({ userID, name, mail })
-				await user
-					.update()
-					.then(async () => {
-						user.password = password
-						res.json({ valid: true })
-						let mailerReq = http.request(
-							{
-								hostname: '127.0.0.1',
-								port: config.port.mailer,
-								method: 'POST',
-								headers: {
-									'Content-Type': 'application/json',
+						token = seed(6)
+						appData
+							.store({ token }, { mail, action: 'validate-mail' }, { replace: true })
+							.then(({ acknowledged } = {}) => {
+								if (acknowledged) {
+									let mailerReq = http.request(
+										{
+											hostname: '127.0.0.1',
+											port: config.port.mailer,
+											method: 'POST',
+											headers: {
+												'Content-Type': 'application/json',
+											}
+										}
+									)
+									mailerReq.write(JSON.stringify({
+										template: 'validateEmail',
+										to: mail,
+										args: { link: `ysyx.org/register?token=${token}&mail=${Buffer.from(mail).toString('base64')}` }
+									}))
+									mailerReq.end()
+									return res.status(statusCode.Success.OK).end()
+								} else {
+									logger.info(`Insert token<${token}> and mail<${mail}> Error`)
+									return res.status(statusCode.ServerError.InternalServerError).end()
 								}
-							}
-						)
-						mailerReq.write(JSON.stringify({
-							template: 'registerEmail',
-							to: mail,
-							args: {}
-						}))
-						mailerReq.end()
-						await appData.delete({ mail, action: 'validate-mail'})
-						logger.access(`User ${user} successfully registered`)
+							})
+					})()
+					break
+				case 'VALIDATE':
+					validateRegisterPayload(payload, res, () => {
+						res.status(statusCode.Success.OK).end()
 					})
-					.catch(e => {
-						logger.info(`create user error: ${e.stack}`)
-						res.sendStatus(500)
+					break
+				case 'CREATE_ACCOUNT':
+					validateRegisterPayload(payload, res, async ({ mail, userID, password }) => {
+						const user = new User({ userID, mail })
+						try {
+							user.password = password
+						} catch (e) {
+							logger.errAcc(`[/register:CREATE_ACCOUNT] Illegal password (${typeof password}, length ${password.length})`)
+							res.status(statusCode.ClientError.BadRequest).end('[4] Bad password')
+						}
+						await user
+							.update()
+							.then(async () => {
+								await appData.delete({ mail, action: 'validate-mail' })
+								logger.access(`${user} created`)
+							})
+							.catch(e => {
+								logger.info(`[/register:CREATE_ACCOUNT] Error creating user: ${e.stack}`)
+								res.status(statusCode.ClientError.PaymentRequired).end()
+							})
+						res.status(statusCode.Success.OK).end()
 					})
-			} else {
-				logger.errAcc(`Unknown action provided <${action}>`)
-				return res.sendStatus(404)
+					break
+				default:
+					// action is not supported, signal BadRequest
+					logger.errAcc(`Unknown action <${action}>`)
+					res.status(statusCode.ClientError.BadRequest).end()
 			}
 		}
 	)
+	.use(errorHandler)
 // Expose handle function as default export
 export default (req, res, next) => server.handle(req, res, next)
-async function validateUserID(userID) {
-	if (!userID || !(typeof userID === 'string') || !IDRegex.test(userID)) {
-		logger.errAcc(`Invalid userID: <${userID}>`)
-		return { valid: false, msg: 'Invalid userID' }
-	}
-	if (await User.locate(userID)) {
-		logger.errAcc(`userID: <${userID}> has already been registered`)
-		return { valid: false, msg: 'userID has already been registered' }
-	}
-	return { valid: true }
-}
-async function validateToken(mail, token) {
+/**
+ * Check for email validation token and optionally userID
+ * @param {{
+ * 	mail: String,
+ * 	token: String,
+ * 	userID: String | null
+ * }} payload
+ * @param {import('express').Response} res
+ * @param {function({
+ * 	mail: String,
+ * 	token: String,
+ * 	userID: String | null
+ * }): Any} next
+ */
+async function validateRegisterPayload(payload, res, next) {
+	const { mail, token, userID, ...args } = payload
 	let content = await appData.load({ mail, action: 'validate-mail' })
 	if (!content || content.token !== token) {
-		logger.errAcc(`token <${token}> cannot match the one bound to the mail <${mail}> in the database`)
-		return { valid: false, msg: 'Invalid token' }
+		logger.errAcc(`Failed to validate token <${token}> attached with mail <${mail}>`)
+		return res.status(statusCode.ClientError.BadRequest).end('[1] Token not valid')
+	} else {
+		if (typeof userID === 'string') {
+			if (!Rx.ID.test(userID)) {
+				logger.errAcc(`[/register] validateRegisterPayload: illegal userID '${userID}'`)
+				return res
+					.status(statusCode.ClientError.BadRequest)
+					.end('[2] Illegal userID')
+			}
+			else if (await User.locate(userID)) {
+				logger.errAcc(`[/register] validateRegisterPayload: [User <${userID}>]' already exist`)
+				return res
+					.status(statusCode.ClientError.BadRequest)
+					.end('[3] User already exist')
+			}
+		}
+		// Validation passed
+		next({ mail, token, userID, ...args })
 	}
-	return { valid: true }
 }
