@@ -3,7 +3,7 @@ import nodemailer from 'nodemailer'
 import fs from 'fs'
 import soda from 'sodajs/dist/soda.node.js'
 // Environmental setup
-import { init, logger, config, PROJECT_ROOT } from '../../lib/env.js'
+import { init, logger, config, PROJECT_ROOT, DOMAIN } from '../../lib/env.js'
 init(import.meta)
 
 const SMTP = config.mailer
@@ -98,7 +98,8 @@ function render(templateName, args) {
 					/\{\{\s*(?<entry>\w+)\s*\}\}/g,
 					(...arg) => {
 						let { entry } = arg.pop()
-						return { templateCss, indexCss, html: soda(templateHtml, args) }[entry]
+						return { templateCss, indexCss, html: soda(
+							templateHtml, { DOMAIN, ...args }) }[entry]
 					}
 				)
 		return { subject, html }
