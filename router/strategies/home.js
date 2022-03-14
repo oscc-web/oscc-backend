@@ -106,7 +106,7 @@ const server = express()
 									mailerReq.write(JSON.stringify({
 										template: 'validateEmail',
 										to: mail,
-										args: { link: `ysyx.org/register?token=${token}&mail=${Buffer.from(mail).toString('base64')}` }
+										args: { link: `/register?token=${token}&mail=${Buffer.from(mail).toString('base64')}` }
 									}))
 									mailerReq.end()
 									return res.status(statusCode.Success.OK).end()
