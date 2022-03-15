@@ -65,7 +65,6 @@ const server = express()
 			* @type {{ action: 'SEND_MAIL' | 'VALIDATE_TOKEN' | 'VALIDATE_USER_ID' | 'REGISTER', mail: String, userID: String, name: String, password: String, token: String }}
 			*/
 			let payload = req.body
-			console.log(req.body)
 			if (!payload || typeof payload !== 'object') {
 				res.sendStatus(400)
 			}
