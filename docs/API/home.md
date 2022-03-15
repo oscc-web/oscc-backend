@@ -49,13 +49,24 @@ Method POST and GET will be accepted.
 
 contained properties:
 
-+ `action`: String 'VALIDATE_MAIL' | 'VALIDATE_USER_ID' | 'VALIDATE_TOKEN' | 'REGISTER'
++ `action`: String 'SEND_MAIL' | 'VALIDATE_USER_ID' | 'VALIDATE_TOKEN' | 'REGISTER'
 
-    + `VALIDATE_MAIL`: 
+    + `SEND_MAIL`: 
 
         Check if mail is valid or registered
-        If valid, validateEmail with registration link will be sent to given mail. Mail and generated token will be stored. Returns {valid: true}
-        If not, returns {valid:false, msg: String}
+        If valid, validateEmail with registration link will be sent to given mail. Mail and generated token will be stored.
+        
+        > Returns
+        > 
+        > + Success (Mail generated and sent)
+        >
+        >   `200/OK`
+        >
+        > + Fail
+        >   
+        >   `401/`   
+        >
+        >   If not, returns {valid:false, msg: String}
     
     + `VALIDATE_USER_ID`: 
 

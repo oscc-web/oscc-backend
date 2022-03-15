@@ -55,7 +55,11 @@ module.exports = {
 					'utils',
 					'dists',
 					'mongodb',
+					'nodebb',
 					'wildcard',
+					'satisfiable',
+					'unprocessable',
+					'jsonwebtoken'
 				],
 				'skipIfMatch': [
 					'http://[^s]*',
