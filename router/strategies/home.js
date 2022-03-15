@@ -128,7 +128,7 @@ const server = express()
 							user.password = password
 						} catch (e) {
 							logger.errAcc(`[/register:CREATE_ACCOUNT] Illegal password (${typeof password}, length ${password.length})`)
-							res.status(statusCode.ClientError.BadRequest).end('[4] Bad password')
+							return res.status(statusCode.ClientError.BadRequest).end('[4] Bad password')
 						}
 						await user
 							.update()
