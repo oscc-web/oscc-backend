@@ -57,7 +57,7 @@ app.use((req, res) => {
 					html
 				})
 					.then(() => {
-						res.status(200).send()
+						res.status(statusCode.Success.OK).send()
 						logger.info(`Mail "${subject}" sent to ${to} with args ${JSON.stringify(args)}`)
 					})
 					.catch(e => errorHandler(e, req, res))

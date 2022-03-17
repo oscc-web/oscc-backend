@@ -8,3 +8,4 @@ logger.info(`YSYX backend services launched at [${Args.mode}] mode`)
 
 new Process('router')
 new Process($M('mailer'))
+new Process($M('upload'))
