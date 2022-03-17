@@ -54,7 +54,7 @@ app.use('/', (req, res) => {
 					// Payload is not a valid JSON object
 					return logger.errAcc('Request payload is not an JSON object: ' + JSON.stringify(payload)) && res.sendStatus(statusCode.ClientError.BadRequest)
 				let content = await appData.load({ user, action: payload.action })
-				if (content.fileID !== payload.fileID) {
+				if (!!payload.fileID && content.fileID !== payload.fileID) {
 					logger.errAcc(`File ${payload.fileID} of User ${user} not found`)
 					return res.sendStatus(statusCode.ClientError.NotFound)
 				} else {
