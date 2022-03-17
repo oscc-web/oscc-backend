@@ -3,9 +3,13 @@ import nodemailer from 'nodemailer'
 import fs from 'fs'
 import soda from 'sodajs/dist/soda.node.js'
 // Environmental setup
-import { init, logger, config, PROJECT_ROOT, DOMAIN } from '../../lib/env.js'
-init(import.meta)
-
+import { config, PROJECT_ROOT, DOMAIN } from '../../lib/env.js'
+import logger from '../../lib/logger.js'
+import statusCode from '../../lib/status.code.js'
+import errorHandler from '../../utils/errorHandler.js'
+/**
+ * @typedef {nodemailer.SMTPConnection.Options} mailerConfig
+ */
 const SMTP = config.mailer
 // create nodemailer transport
 const transport = nodemailer.createTransport(SMTP)
@@ -41,10 +45,10 @@ app.use((req, res) => {
 					html = renderResult.html
 				} catch (error) {
 					logger.warn(error.stack)
-					res.status(500).end()
+					res.status(statusCode.ClientError.BadRequest).end()
 					return
 				}
-				fs.writeFileSync(`${PROJECT_ROOT}/var/log/mailer/${template}.out.html`, html)
+				// fs.writeFileSync(`${PROJECT_ROOT}/var/log/mailer/${template}.out.html`, html)
 				transport.sendMail({
 					from: SMTP.auth.user,
 					sender: SMTP.sender || 'Mail bot',
@@ -52,9 +56,11 @@ app.use((req, res) => {
 					subject,
 					html
 				})
-					.then(() => res.status(200).send())
-					.then(() => logger.info(`Mail "${subject}" sent to ${to} with args ${JSON.stringify(args)}`))
-					.catch(e => logger.warn('Failed to send mail: ' + e.stack))
+					.then(() => {
+						res.status(200).send()
+						logger.info(`Mail "${subject}" sent to ${to} with args ${JSON.stringify(args)}`)
+					})
+					.catch(e => errorHandler(e, req, res))
 			})
 	}
 })

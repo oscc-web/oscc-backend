@@ -1,5 +1,5 @@
 import { IncomingMessage } from 'http'
-import { Rx, logger } from './env.js'
+import { Rx } from '../lib/env.js'
 
 IncomingMessage.prototype.__defineGetter__(
 	'origin',
@@ -93,8 +93,7 @@ IncomingMessage.prototype.injectCookies = function (cookies) {
 	delete this.$parsedCookies
 	// Validate input
 	if (!cookies || typeof cookies !== 'object') {
-		logger.error('Failed to inject cookies because input is invalid', cookies)
-		return
+		throw new TypeError('Invalid input for cookie injection', cookies)
 	}
 	// Do the injection
 	let cookieList = (this.headers?.cookie || '').split(/\s*;\s*/g)
@@ -108,18 +107,13 @@ IncomingMessage.prototype.injectCookies = function (cookies) {
 				: JSON.stringify(value)
 		}
 		// Only insert new cookie if 'value' is not empty
-		if (!value) {
-			logger.warn(`Trying to inject cookie named '${name}' with an empty value`)
-			return
-		}
+		if (!value)
+			throw new TypeError(`Trying to inject cookie named '${name}' with an empty value`)
 		// Check illegal character ';'
-		if (/;/g.test(value)) {
-			logger.warn(`Illegal cookie value: ${value}`)
-			return
-		}
+		if (/;/g.test(value))
+			throw new TypeError(`Illegal cookie value: ${value}`)
 		// Add new value string
 		cookieList.push(`${name}=${encodeURIComponent(value)}`)
-		logger.verbose(`Cookie '${name}' with value '${value}' injected to request header`)
 	})
 	// Alter request header
 	if (!('headers' in this)) this.headers = {}
@@ -128,10 +122,8 @@ IncomingMessage.prototype.injectCookies = function (cookies) {
 
 IncomingMessage.prototype.injectInternalCookies = function (cookies) {
 	// Validate input
-	if (!cookies || typeof cookies !== 'object') {
-		logger.error('Failed to inject cookies because input is invalid', cookies)
-		return
-	}
+	if (!cookies || typeof cookies !== 'object')
+		throw new TypeError('Failed to inject cookies because input is invalid', cookies)
 	return this.injectCookies(Object.fromEntries(
 		Object
 			.entries(cookies)

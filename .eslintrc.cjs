@@ -36,6 +36,7 @@ module.exports = {
 		'no-cond-assign': [
 			0
 		],
+		'no-control-regex': [0],
 		'object-curly-spacing': [
 			1,
 			'always'
@@ -68,7 +69,7 @@ module.exports = {
 					'\\.[cm]?js$',
 					'getters?',
 					'setters?',
-					'^std'
+					'^std\\w*'
 				],
 				'skipWordIfMatch': [
 					'ysyx',

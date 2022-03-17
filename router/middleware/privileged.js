@@ -1,4 +1,4 @@
-import { logger } from '../../lib/env.js'
+import logger from '../../lib/logger.js'
 import { PRIV, PRIV_LUT } from '../../lib/privileges.js'
 import User from '../../lib/user.js'
 /**
@@ -40,7 +40,7 @@ export default function (
 		logger.verbose(`Middleware "Privileged" captured incoming request with parsedCookies ${JSON.stringify(req?.parsedCookies)}`)
 		const user = await User.locate(req?.internalCookies?.userID)
 		logger.verbose(`Extracted ${user} from internalCookies ${JSON.stringify(req?.internalCookies)}`)
-		if(user instanceof User) {
+		if (user instanceof User) {
 			// Check privileges
 			const isPrivileged = privileges
 				.map(priv => user.hasPriv(priv))

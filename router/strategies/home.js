@@ -1,13 +1,14 @@
 import express from 'express'
 import bodyParser from 'body-parser'
 import User from '../../lib/user.js'
-import http from 'http'
+import logger from '../../lib/logger.js'
 import statusCode from '../../lib/status.code.js'
+import errorHandler from '../../utils/errorHandler.js'
 import Session, { SESSION_TOKEN_NAME } from '../../lib/session.js'
-import { logger, config, Rx } from '../../lib/env.js'
+import { config, Rx } from '../../lib/env.js'
 import { AppData } from '../../lib/appData.js'
 import { seed } from '../../utils/crypto.js'
-import errorHandler from '../middleware/errorHandler.js'
+import { sendMail } from '../../modules/mailer/lib.js'
 // AppData for current scope
 let appData = new AppData('router/home')
 /**
@@ -92,23 +93,15 @@ const server = express()
 							.store({ token }, { mail, action: 'validate-mail' }, { replace: true })
 							.then(({ acknowledged } = {}) => {
 								if (acknowledged) {
-									let mailerReq = http.request(
-										{
-											hostname: '127.0.0.1',
-											port: config.port.mailer,
-											method: 'POST',
-											headers: {
-												'Content-Type': 'application/json',
-											}
-										}
-									)
-									mailerReq.write(JSON.stringify({
-										template: 'validateEmail',
-										to: mail,
-										args: { link: `/register?token=${token}&mail=${Buffer.from(mail).toString('base64')}` }
-									}))
-									mailerReq.end()
-									return res.status(statusCode.Success.OK).end()
+									const link = `/register?token=${token}&mail=${Buffer.from(mail).toString('base64')}`
+									return sendMail(mail, 'validateEmail', { link })
+										.then(() => res.status(statusCode.Success.OK).end())
+										.catch((e) => {
+											logger.error(`Error calling @mailer with args ${
+												JSON.stringify({ mail, link })
+											}: ${e.message}`)
+											res.status(statusCode.ServerError.InternalServerError).end('[X] Internal Server Error')
+										})
 								} else {
 									logger.info(`Insert token<${token}> and mail<${mail}> Error`)
 									return res.status(statusCode.ServerError.InternalServerError).end()

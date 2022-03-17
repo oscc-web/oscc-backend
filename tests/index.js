@@ -56,9 +56,6 @@ let args = process.argv
 		}),
 	failedCount = 0
 if (args.length === 0) args = list
-// Initialize env parameters
-import { init } from '../lib/env.js'
-init(import.meta, loggerOutputLevel)
 // Add path elements to arg string
 args = args
 	// Add prefix
