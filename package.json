@@ -33,7 +33,7 @@
     "scripts": "scripts"
   },
   "scripts": {
-    "test": "./scrpits/stop; ./scripts/start --debug; ./scripts/log"
+    "dev": "node . -d"
   },
   "repository": {
     "type": "git",

@@ -1,5 +1,7 @@
 /**
  * @typedef {Object} Arguments
+ * Action of current run.
+ * @property {'start' | 'dev' | 'stop' | 'restart' | 'connect'} __action__
  * Arguments from command-line or parent-process.
  * @property {'PRODUCTION' | 'DEVELOPMENT'} mode
  * The running mode of current module.
@@ -100,7 +102,7 @@ function makeArgv() {
 					throw new TypeError(`Unrecognized toggle: -${toggle}`)
 			})
 		} else {
-			if (['start', 'stop', 'restart', 'connect'].indexOf(arg.toLocaleLowerCase()) >= 0)
+			if (['start', 'dev', 'stop', 'restart', 'connect'].indexOf(arg.toLocaleLowerCase()) >= 0)
 				return { __action__: arg.toLocaleLowerCase() }
 			else
 				// Illegal argument
@@ -116,7 +118,7 @@ usage: node . start [-h] [-d --mode=DEVELOPMENT] [-v --log=verbose] ...
 
 available commands:
 	start	Start the server in specified mode.
-	connect	Connect to command-line interface of current running server.
+	connect	Connect to command-line interface of server utilities.
 	restart	Restart running server, start a new server if none is running.
 	install Install dependencies and runtime environment on current system.
 `.trim()

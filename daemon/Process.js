@@ -111,9 +111,9 @@ export default class Process {
 	static set SIGINT(val) {
 		if (this.SIGINT && !val) throw new TypeError('SIGINT can not be turned off once triggered')
 		// First SIGINT received, try to terminate all processes and exit gracefully
-		if (!this.SIGINT)
-			logger.info('Received SIG_INT.'),
-			logger.info('Gracefully exiting, press CTRL-C again to exit immediately.'),
+		logger.info('Received SIG_INT.')
+		if (!this.SIGINT) {
+			logger.info('Gracefully exiting, press CTRL-C again to exit immediately.')
 			Promise
 				.all(this.list.map(proc => proc.kill('SIGINT')))
 				.then(results => {
@@ -123,10 +123,12 @@ export default class Process {
 				.catch(e => {
 					logger.error(`Error during graceful exit: ${e.message}`)
 				})
+		}
 		// Second SIGINT received, exit anyway
-		else
-			logger.warn('Force exiting.'),
+		else if (val) {
+			logger.warn('Force exiting.')
 			process.exit(1)
+		}
 		// Set SIGINT according to val
 		this.#SIGINT = !!val
 	}
@@ -134,7 +136,13 @@ export default class Process {
 /**
  * Exit listener
  */
-process.on('SIGINT', () => {
-	process.stdout.write('\n')
-	Process.SIGINT = true
-})
+process.on('SIGINT', (() => {
+	let deBounce = performance.now() + 200
+	return () => {
+		if (performance.now() > deBounce) {
+			process.stdout.write('\n')
+			Process.SIGINT = true
+		}
+		deBounce = performance.now() + 200
+	}
+})())
