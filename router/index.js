@@ -1,5 +1,5 @@
 // Imports
-import { resolveDistPath, config, Rx, IS_DEVELOPMENT_MODE, Args } from '../lib/env.js'
+import { resolveDistPath, config, Rx, Args } from '../lib/env.js'
 import logger from '../lib/logger.js'
 import express from 'express'
 // Middleware
