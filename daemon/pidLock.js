@@ -24,13 +24,14 @@ export function getLock() {
 	}
 }
 // Terminate existing process and set currentPid as new lock
-export async function setLock(currentPid) {
+export async function setLock(currentPid = '') {
 	let pid, pending = 0
 	// If process exists, send SIGINT
 	while (pid = getLock()) {
 		if (!pending)
 			try {
-				logger.info(`Found a running server with pid ${pid}, trying to send SIGINT`)
+				if (currentPid)
+					logger.info(`Found a running server with pid ${pid}, trying to send SIGINT`)
 				const killed = process.kill(pid, 'SIGINT')
 				if (!killed) throw new Error('failed to kill existing process')
 			} catch (e) {

@@ -1,6 +1,3 @@
-/**
- * @enum {String}
- */
 const commands = Object.freeze({
 	// Server control
 	/**

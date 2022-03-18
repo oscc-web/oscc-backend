@@ -13,11 +13,27 @@ export default class Process {
 	 * @param {String} path Entry point path relative to project root
 	 * @param {import('./utils/args.js').Arguments} args List of additional arguments (argv)
 	 */
-	constructor(path, args = {}) {
+	constructor(path, { detached = false, ...args } = {}) {
 		this.#path = path
-		this.#args = Object.assign({ ...Args, port: undefined }, args)
+		this.#args = Object.assign({ ...Args, port: undefined, __COMMAND__: 'run' }, args)
 		Process.list.push(this)
-		this.#launch()
+		const proc = this.#launch(detached)
+		if (detached) {
+			// eslint-disable-next-line spellcheck/spell-checker
+			proc.unref()
+		}
+		else {
+			proc.on('spawn', () => 
+				logger.info(`Process ${this.#path} launched`)
+			)
+			proc.on('exit', this.onExit())
+			// eslint-disable-next-line spellcheck/spell-checker
+			// Stream stdout and stderr to shared output (only in dev mode)
+			if (Args.logToConsole)
+				this.stream().transportError()
+			else
+				this.transportError()
+		}
 	}
 	/**
 	 * Timestamp indicating when last unexpected exit happens
@@ -26,19 +42,23 @@ export default class Process {
 	/**
 	 * Create a new child process and replace into #proc
 	 */
-	#launch() {
-		const proc = this.#proc = spawn('node', [
+	#launch(detached) {
+		const { __COMMAND__, ...args } = this.#args
+		return this.#proc = spawn('node', [
 			resolve(PROJECT_ROOT, this.#path),
-			...Object.entries(this.#args).map(([el, val]) => {
-				if (el && val)
+			__COMMAND__,
+			...Object.entries(args).map(([el, val]) => {
+				if (el && val !== undefined)
 					return `--${el.toString()}=${val.toString()}`
 			}).filter(el => !!el)
-		])
-		// Standard callbacks
-		proc.on('spawn', () => 
-			logger.info(`Process ${this.#path} launched`)
-		)
-		proc.on('exit', (code, signal) => {
+		], { detached })
+	}
+	/**
+	 * Chile process exit handler
+	 * @returns {(code : Number | undefined, signal: NodeJS.Signals) => Any}
+	 */
+	onExit() {
+		return (code, signal) => {
 			if (!Process.SIGINT) {
 				const lastUnexpectedExit = this.#lastUnexpectedExit, coolDown = config.processRestartCoolDownPeriodMs || 60_000
 				// Treat as an accidental exit
@@ -56,13 +76,7 @@ export default class Process {
 			} else {
 				logger.info(`Process ${this.#path} exited on ${signal} (${code})`)
 			}
-		})
-		// eslint-disable-next-line spellcheck/spell-checker
-		// Stream stdout and stderr to shared output (only in dev mode)
-		if (IS_DEVELOPMENT_MODE)
-			this.stream().transportError()
-		else
-			this.transportError()
+		}
 	}
 	/**
 	 * Captures all child-processes' output and print to console
@@ -84,6 +98,11 @@ export default class Process {
 			(chunk) => logger.error(`Uncaught error from ${this.#path}: ${chunk.toString().trim()}`)
 		)
 		return this
+	}
+
+	detach() {
+		const proc = this.#proc
+		proc.detach()
 	}
 	/**
 	 * Kill this process using given signal

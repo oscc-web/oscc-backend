@@ -1,4 +1,4 @@
-import commands from '../daemon/commands.js'
+// import commands from '../daemon/commands.js'
 /**
  * @typedef {Object} Arguments
  * Action of current run.
@@ -14,8 +14,12 @@ import commands from '../daemon/commands.js'
  * The incoming host the server listens to, defaults to local host
  * @property {Number} [cluster=0]
  * Number of cluster workers for current module, set to 0 if cluster is not needed
- * @property {Boolean} [transportLogToFile=false]
+ * @property {Boolean} [logToFile=false]
  * Controls whether logger will transport to file located in var/log
+ * @property {Boolean} [logToConsole=false]
+ * Controls whether logger will transport to file located in var/log
+ * @property {Boolean} [useDevProxy=false]
+ * Controls whether front-end dev proxies are honored
  */
 /**
  * @type {Arguments}
@@ -26,7 +30,9 @@ const args = {
 		logLevel: undefined,
 		port: undefined,
 		host: '127.0.0.1',
-		transportLogToFile: false
+		logToFile: undefined,
+		logToConsole: undefined,
+		useDevProxy: undefined,
 	},
 	flags = {
 		help() {
@@ -37,6 +43,10 @@ const args = {
 			return {
 				mode: /^dev/i.test(mode) ? 'DEVELOPMENT' : 'PRODUCTION'
 			}
+		},
+		useDevProxy(arg = true) {
+			arg = JSON.parse(arg)
+			return { useDevProxy: arg }
 		},
 		host(host) {
 			return { host }
@@ -49,21 +59,86 @@ const args = {
 				throw new TypeError(`Bad port number: ${port}`)
 		},
 		logLevel(logLevel) {
-			if (['verbose', 'debug', 'access', 'errAcc', 'info', 'warn', 'error'].indexOf(logLevel))
+			if (
+				['verbose', 'debug', 'access', 'errAcc', 'info', 'warn', 'error']
+					.indexOf(logLevel) >= 0
+			)
 				return { logLevel }
 			else
 				throw new TypeError(`Unknown logLevel: ${logLevel}`)
 		},
-		transportLogToFile(transportLogToFile = true) {
-			return { transportLogToFile }
-		}
+		logToFile(arg = true) {
+			arg = JSON.parse(arg)
+			return { logToFile: arg }
+		},
+		logToConsole(arg = true) {
+			arg = JSON.parse(arg)
+			return { logToConsole: arg }
+		},
 	},
 	toggles = {
 		h: () => flags.help(),
-		l: () => flags.transportLogToFile(),
-		d: () => flags.mode('DEVELOPMENT'),
+		l: () => flags.logToConsole(),
+		L: () => flags.logToFile(),
+		d: () => [flags.mode('DEVELOPMENT'), flags.useDevProxy()],
 		v: () => flags.logLevel('verbose'),
 		D: () => [flags.mode('DEVELOPMENT'), flags.logLevel('debug')],
+		p: () => [flags.useDevProxy()],
+	},
+	commands = {
+		// Server control
+		/**
+		 * Start the server and stay on front
+		 */
+		run() {
+			return 'Start the server and stay on front'
+		},
+		/**
+		 * Start the server, exits if there is already a server running
+		 */
+		start() {
+			return 'Start the server, exits if there is already a server running'
+		},
+		/**
+		 * Restart the server, kills all existing servers
+		 */
+		restart() {
+			return 'Restart the server, kills all existing servers'
+		},
+		/**
+		 * Stop any running server process
+		 */
+		stop() {
+			return 'Stop any running server process'
+		},
+		/**
+		 * Launch in development mode
+		 */
+		dev() {
+			return 'Launch in development mode'
+		},
+		// Utility
+		/**
+		 * Install commands and check the existence of config.js[on]
+		 */
+		install() {
+			return 'Install commands and check the existence of config.js[on]'
+		},
+		/**
+		 * Connect to ysyx REPL with bunch of handful tools
+		 */
+		connect() {
+			return 'Connect to ysyx REPL with bunch of handful tools'
+		},
+		/**
+		 * Watch new logs from mongodb log collection
+		 */
+		watch() {
+			flags.logToConsole()
+			flags.mode('DEVELOPMENT')
+			flags.logLevel('verbose')
+			return 'Watch new logs from mongodb log collection'
+		},
 	}
 
 /**
@@ -92,7 +167,8 @@ function makeArgv() {
 	return Object.assign({}, ...argv.map(arg => {
 		if (/^--/.test(arg)) {
 			// Treat argument as flag
-			const [flag, value] = arg.replace(/^--/gi, '').split('=', 2)
+			let [flag, value] = arg.replace(/^--/gi, '').split('=', 2)
+			flag = flag.replace(/-[a-z]/gi, ([_, c]) => c.toUpperCase())
 			if (flag in flags)
 				return flags[flag](value)
 			else {
@@ -110,8 +186,9 @@ function makeArgv() {
 					throw new TypeError(`Unrecognized toggle: -${toggle}`)
 			})
 		} else {
-			if (arg.toLocaleLowerCase() in commands)
-				return { __COMMAND__: arg.toLocaleLowerCase() }
+			const command = arg.toLocaleLowerCase()
+			if (command in commands)
+				return commands[command](), { __COMMAND__: command }
 			else
 				// Illegal argument
 				throw new TypeError(`Illegal argument: ${arg}`)
@@ -125,8 +202,12 @@ YSYX Backend Services - daemon
 usage: node . start [-h] [-d --mode=DEVELOPMENT] [-v --log=verbose] ...
 
 available commands:
-	start	Start the server in specified mode.
-	connect	Connect to command-line interface of server utilities.
-	restart	Restart running server, start a new server if none is running.
-	install Install dependencies and runtime environment on current system.
+	start    Start the server in specified mode.
+	connect  Connect to command-line interface of server utilities.
+	watch    Watch database log updates.
+	restart  Restart running server, start a new server if none is running.
+	install  Install dependencies and runtime environment on current system.
+
+parameters:
+	-l, -L   Log transport triggers. -l enables console transport, -L enables file transport
 `.trim()

@@ -46,7 +46,7 @@ express()
 		// Routing strategy
 		home,
 		// Static server can be either a static dist or vite dev server
-		(IS_DEVELOPMENT_MODE && config.port.vite)
+		(Args.useDevProxy)
 			// Forward traffic to vite dev server
 			? (() => {
 				logger.info(`YSYX.ORG redirected to development port [${config.port.vite}]`)

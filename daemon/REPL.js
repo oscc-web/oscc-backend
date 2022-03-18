@@ -8,8 +8,7 @@ import { PRIV, PRIV_LUT } from '../lib/privileges.js'
 import dbInit from '../utils/mongo.js'
 import { hash } from '../utils/crypto.js'
 import { sendMail } from '../modules/mailer/lib.js'
-import prompt from 'password-prompt'
-import { Readable, Writable } from 'stream'
+import { consoleTransport } from '../lib/logger.js'
 const rp = repl.start({
 	prompt: 'ysyx > ',
 	ignoreUndefined: true,
@@ -25,7 +24,7 @@ rp.defineCommand('help', {
 })
 Object
 	.entries({
-		Session, User, Group, AppData, AppDataWithFs, PRIV, PRIV_LUT, sendMail,
+		Session, User, Group, AppData, AppDataWithFs, consoleTransport, PRIV, PRIV_LUT, sendMail,
 		db: dbInit('user/CRUD', 'session/CRUD', 'groups/CRUD', 'appData/CRUD', 'log/CRUD'),
 		pwd(str) {
 			return hash(str)
