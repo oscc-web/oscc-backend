@@ -6,7 +6,10 @@ import Group from '../lib/groups.js'
 import { AppData, AppDataWithFs } from '../lib/appData.js'
 import { PRIV, PRIV_LUT } from '../lib/privileges.js'
 import dbInit from '../utils/mongo.js'
+import { hash } from '../utils/crypto.js'
 import { sendMail } from '../modules/mailer/lib.js'
+import prompt from 'password-prompt'
+import { Readable, Writable } from 'stream'
 const rp = repl.start({
 	prompt: 'ysyx > ',
 	ignoreUndefined: true,
@@ -22,9 +25,11 @@ rp.defineCommand('help', {
 })
 Object
 	.entries({
-		Session, User, Group, AppData, AppDataWithFs, PRIV, PRIV_LUT,
+		Session, User, Group, AppData, AppDataWithFs, PRIV, PRIV_LUT, sendMail,
 		db: dbInit('user/CRUD', 'session/CRUD', 'groups/CRUD', 'appData/CRUD', 'log/CRUD'),
-		sendMail
+		pwd(str) {
+			return hash(str)
+		},
 	})
 	.forEach(([name, value]) => {
 		if (typeof value === 'object') value = Object.freeze(value)

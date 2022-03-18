@@ -137,6 +137,13 @@ class MongoCollection {
 		// Select method according to input arguments
 		return this.#collection.deleteMany(filter, option)
 	}
+
+	watch(pipeline, options = {}) {
+		// Check access privilege
+		this.#access('R')
+		// Select method according to input arguments
+		return this.#collection.watch(pipeline, options)
+	}
 }
 
 let retryCount = 5
@@ -166,7 +173,7 @@ let connection = await connect(config.mongo, onConnectionError)
  * }}
  * @description return value can be used like: value.collectionName.find() similar to db.collectionName.find()
  */
-export default function init(...collectionDescriptor) {
+export default function dbInit(...collectionDescriptor) {
 	// Initialize each descriptor to collection
 	return Object.fromEntries(
 		collectionDescriptor

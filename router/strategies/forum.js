@@ -11,27 +11,26 @@ export const forumGroupPrivLUT = Object.freeze([
 ])
 
 export default async function (req, res, next) {
-	return await Session.locate(req).then(session => {
-		if (session instanceof Session) {
-			const header = {
-					'alg': 'HS256',
-					'typ': 'JWT'
-				},
-				userData = {
-					...session.user.info,
-					id: session.userID,
-					groups: []
-				}
-			forumGroupPrivLUT.forEach(([priv, groupName]) => {
-				if (session.user.hasPriv(priv)) {
-					userData.groups.push(groupName)
-				}
-			})
-			const secret = config?.nodebb?.secret || ''
-			req.injectCookies({
-				token: jsonwebtoken.sign(userData, secret, { header })
-			})
-		}
-		next()
-	})
+	const { session } = req
+	if (session instanceof Session) {
+		const header = {
+				'alg': 'HS256',
+				'typ': 'JWT'
+			},
+			userData = {
+				...session.user.info,
+				id: session.userID,
+				groups: []
+			}
+		forumGroupPrivLUT.forEach(([priv, groupName]) => {
+			if (session.user.hasPriv(priv)) {
+				userData.groups.push(groupName)
+			}
+		})
+		const secret = config?.nodebb?.secret || ''
+		req.injectCookies({
+			token: jsonwebtoken.sign(userData, secret, { header })
+		})
+	}
+	return next()
 }

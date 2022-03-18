@@ -1,7 +1,8 @@
+import commands from '../daemon/commands.js'
 /**
  * @typedef {Object} Arguments
  * Action of current run.
- * @property {'start' | 'dev' | 'stop' | 'restart' | 'connect'} __action__
+ * @property {commands} __COMMAND__
  * Arguments from command-line or parent-process.
  * @property {'PRODUCTION' | 'DEVELOPMENT'} mode
  * The running mode of current module.
@@ -13,16 +14,19 @@
  * The incoming host the server listens to, defaults to local host
  * @property {Number} [cluster=0]
  * Number of cluster workers for current module, set to 0 if cluster is not needed
+ * @property {Boolean} [transportLogToFile=false]
+ * Controls whether logger will transport to file located in var/log
  */
-
 /**
  * @type {Arguments}
  */
 const args = {
+		__COMMAND__: 'start',
 		mode: 'PRODUCTION',
 		logLevel: undefined,
 		port: undefined,
-		host: '127.0.0.1'
+		host: '127.0.0.1',
+		transportLogToFile: false
 	},
 	flags = {
 		help() {
@@ -49,10 +53,14 @@ const args = {
 				return { logLevel }
 			else
 				throw new TypeError(`Unknown logLevel: ${logLevel}`)
+		},
+		transportLogToFile(transportLogToFile = true) {
+			return { transportLogToFile }
 		}
 	},
 	toggles = {
 		h: () => flags.help(),
+		l: () => flags.transportLogToFile(),
 		d: () => flags.mode('DEVELOPMENT'),
 		v: () => flags.logLevel('verbose'),
 		D: () => [flags.mode('DEVELOPMENT'), flags.logLevel('debug')],
@@ -81,7 +89,7 @@ function makeArgv() {
 		.replace(/\s(?!-)/gi, '=')
 		.split(' ')
 		.filter(str => !!str)
-	return Object.assign({}, ...['start', ...argv].map(arg => {
+	return Object.assign({}, ...argv.map(arg => {
 		if (/^--/.test(arg)) {
 			// Treat argument as flag
 			const [flag, value] = arg.replace(/^--/gi, '').split('=', 2)
@@ -102,8 +110,8 @@ function makeArgv() {
 					throw new TypeError(`Unrecognized toggle: -${toggle}`)
 			})
 		} else {
-			if (['start', 'dev', 'stop', 'restart', 'connect'].indexOf(arg.toLocaleLowerCase()) >= 0)
-				return { __action__: arg.toLocaleLowerCase() }
+			if (arg.toLocaleLowerCase() in commands)
+				return { __COMMAND__: arg.toLocaleLowerCase() }
 			else
 				// Illegal argument
 				throw new TypeError(`Illegal argument: ${arg}`)

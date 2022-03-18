@@ -3,9 +3,9 @@ import { resolveDistPath, config, Rx, IS_DEVELOPMENT_MODE, Args } from '../lib/e
 import logger from '../lib/logger.js'
 import express from 'express'
 // Middleware
-import vhost from './middleware/vhost.js'
-import proxy from './middleware/proxy.js'
-import privileged from './middleware/privileged.js'
+import vhost from '../lib/middleware/vhost.js'
+import proxy from '../lib/middleware/proxy.js'
+import privileged from '../lib/middleware/privileged.js'
 import errorHandler from '../utils/errorHandler.js'
 // Strategies
 import home from './strategies/home.js'
@@ -14,10 +14,12 @@ import forumPreprocessor from './strategies/forum.js'
 import Session from '../lib/session.js'
 import { PRIV } from '../lib/privileges.js'
 import statusCode from '../lib/status.code.js'
+import conditional from '../lib/middleware/conditional.js'
+import withSession from '../lib/middleware/withSession.js'
 // Standard error handler
 
 // Extract related configs from user config
-const port = config?.port?.router || 8080
+const port = Args.port || config?.port?.router || 8000
 // Compose the server
 express()
 	// Remove express powered-by header
@@ -76,26 +78,29 @@ express()
 	// DOCS
 	.use(vhost(
 		/^docs.ysyx.(org|cc|dev|local)$/i,
-		// Session preprocessor
-		Session.preprocessor,
 		// Privileged access filter
-		privileged(PRIV.DOCS_PRIVATE_ACCESS, {
-			activeCond: req => /^\/?(private|internal)/i.test(req.url)
-		}),
+		conditional(
+			({ url }) => url.startsWith('/private') || url.startsWith('/internal'),
+			privileged(PRIV.DOCS_PRIVATE_ACCESS, {}, express.static(resolveDistPath('ysyx.docs')))
+		),
 		// Static file server
-		express.static(resolveDistPath('ysyx.docs'))
+		conditional(
+			({ url }) => !url.startsWith('/private') && !url.startsWith('/internal'),
+			express.static(resolveDistPath('ysyx.docs'))
+		)
 	))
 	// SPACE
 	.use(vhost(
 		/^space.ysyx.(org|cc|dev|local)$/i,
 		// Session preprocessor
-		Session.preprocessor,
+		withSession(),
 		// Static file server
 		express.static(resolveDistPath('ysyx.space'))
 	))
 	// FORUM
 	.use(vhost(
 		/^forum.ysyx.(org|cc|dev|local)$/i,
+		withSession(),
 		forumPreprocessor,
 		// Forward processed traffic to real NodeBB service
 		proxy(() => ({
@@ -106,15 +111,11 @@ express()
 	// API server
 	.use(vhost(
 		/^api.ysyx.(org|cc|dev|local)$/i,
-		express().use(
-			// Session preprocessor
-			Session.preprocessor,
-			// Forward processed traffic to real NodeBB service
-			proxy(() => ({
-				hostname: '127.0.0.1',
-				port: config?.port?.api || 8999
-			}))
-		)
+		// Forward processed traffic to real NodeBB service
+		proxy(() => ({
+			hostname: '127.0.0.1',
+			port: config?.port?.api || 8999
+		}))
 	))
 	// Uncaught request handler
 	.use((req, res) => {

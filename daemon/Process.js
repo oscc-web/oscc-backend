@@ -43,7 +43,7 @@ export default class Process {
 				const lastUnexpectedExit = this.#lastUnexpectedExit, coolDown = config.processRestartCoolDownPeriodMs || 60_000
 				// Treat as an accidental exit
 				// Log the incident
-				logger.warn(`Process ${this.#path} unexpectedly exited with code=${code} and signal=${signal}`)
+				logger.warn(`Process ${this.#path} unexpectedly exited on ${signal} (${code})`)
 				// Check if the process exits too frequently
 				if (lastUnexpectedExit && lastUnexpectedExit + coolDown > Date.now()){
 					logger.error(`Process ${this.#path} frequently exits, terminating this process.`)
@@ -53,6 +53,8 @@ export default class Process {
 					this.#lastUnexpectedExit = Date.now()
 					this.#launch()
 				}
+			} else {
+				logger.info(`Process ${this.#path} exited on ${signal} (${code})`)
 			}
 		})
 		// eslint-disable-next-line spellcheck/spell-checker
@@ -118,7 +120,7 @@ export default class Process {
 				.all(this.list.map(proc => proc.kill('SIGINT')))
 				.then(results => {
 					logger.info('All processes gracefully exited, shutting down.')
-					process.exit(results.reduce((a, b) => a || b))
+					process.exit(results.reduce((a, b) => a || b, 0))
 				})
 				.catch(e => {
 					logger.error(`Error during graceful exit: ${e.message}`)
