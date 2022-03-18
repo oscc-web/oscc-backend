@@ -1,5 +1,5 @@
-import { logger } from '../../lib/env.js'
-import statusCode from '../../lib/status.code.js'
+import logger from '../lib/logger.js'
+import statusCode from '../lib/status.code.js'
 
 export default function (err, req, res, next) {
 	logger.warn(`Got Uncaught error upon [${req?.method}] ${req?.headers?.host}${req?.url} from ${req?.origin}\n${err.stack}`)

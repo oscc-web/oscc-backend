@@ -19,7 +19,7 @@ export default function (rewrite) {
 	// Check if rewrite is a function
 	if (typeof rewrite !== 'function') throw new TypeError()
 	// Return express server
-	return function (req, res) {
+	return function (req, res, next) {
 		// Apply custom request transform
 		const proxy = http.request({
 			path: req.url,
@@ -31,7 +31,8 @@ export default function (rewrite) {
 			next_res.pipe(res, {
 				end: true
 			})
-		})
+		}).addListener('error', e => next(e))
 		req.pipe(proxy, { end: true })
+		req.addListener('error', e => next(e))
 	}
 }

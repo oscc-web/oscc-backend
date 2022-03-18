@@ -1,77 +1,59 @@
 import { MongoClient } from 'mongodb'
-import ld from 'lodash'
-import { logger, config } from '../lib/env.js'
-const { _ } = ld
-
+import { config } from '../lib/env.js'
 /**
- * @typedef {Object} mongo 
- * @property {String} host - mongodb hostname default 127.0.0.1
- * @property {String} port - mongodb port default 27017
- * @property {String} database  mongodb database default ysyx 
- * 
- * 
- * @param {mongo} mongo - configuration of mongodb
- * @return {String} - mongodb connection url
+ * @typedef {Object} mongoConfig 
+ * @property {String} password
+ * @property {String} [database='ysyx']
+ * @property {String} [host='127.0.0.1']
+ * @property {Number} [post=27017]
+ * @property {String} username
  */
-export function getConnectionString(mongo) {
-	let usernamePassword = ''
-	if (mongo.username && mongo.password) {
-		usernamePassword = `${mongo.username}:${encodeURIComponent(mongo.password)}@`
-	} else {
-		logger.warn('You have no mongo username/password setup!')
-	}
-	if (!mongo.host) {
-		mongo.host = '127.0.0.1'
-	}
-	if (!mongo.port) {
-		mongo.port = 27017
-	}
-	const dbName = mongo.database
-	if (dbName === undefined || dbName === '') {
-		logger.warn('You have no database name, using "ysyx"')
-		mongo.database = 'ysyx'
-	}
-
-	const hosts = mongo.host.split(',')
-	const ports = mongo.port.toString().split(',')
-	const servers = []
-
-	for (let i = 0; i < hosts.length; i += 1) {
-		servers.push(`${hosts[i]}:${ports[i]}`)
-	}
-	return `mongodb://${usernamePassword}${servers.join()}/${mongo.database}`
+// Breakdown mongo config from user config
+const {
+	username,
+	password,
+	host = '127.0.0.1',
+	port = 27017,
+	database,
+	options = {}
+} = config.mongo || {}
+// Check for required fields
+if (!(username && password && database)) {
+	console.error('Bad mongo configuration', config.mongo)
+	process.exit(1)
 }
+// Error indicating bad mongodb operation
+export class DatabaseOperationError extends Error {}
+export class DatabasePermissionError extends Error {}
+/** 
+* @param {mongoConfig} mongo configuration of mongodb
+* @returns {String} mongodb connection url
+*/
+export const connectionString = `mongodb://${username}:${encodeURIComponent(password)}@${host}:${port}/${database}`
 /**
- * merge default options and mongodb.options
- * @typedef {Object} mongo 
- * @property {MongoClientOptions} options
- * @param {mongo} mongo - mongodb connect options
- * @return {Object} - mongodb connect options
+ * Merged options with defaults and user options
+ * @type {import('mongodb').MongoClientOptions} - mongodb connect options
  */
-export function getConnectionOptions(mongo) {
-	const connectionOptions = {
+export const connectionOptions = Object.freeze(Object.assign(
+	{
 		maxPoolSize: 10,
-		minPoolSize: 3,
-		connectTimeoutMS: 90000,
-	}
-	return _.merge(connectionOptions, mongo.options || {})
-}
+		minPoolSize: 2,
+		connectTimeoutMS: 30000,
+		useUnifiedTopology: true
+	},
+	options
+))
 /**
  * get connection to mongodb
- * 
- * 
  * @param {mongo} options - mongodb connect options
+ * @param {(e: Error) => Any} onError
  * @return {Promise<Db>}
  */
-export async function connect(options) {
-	const connectionString = getConnectionString(options)
-	const connectionOptions = getConnectionOptions(options)
+export async function connect(onError = () => {}) {
 	return await MongoClient
 		.connect(connectionString, connectionOptions)
-		.then(connection => connection.db(options.database))
-		.catch(e => {
-			logger.error('MongoClient disconnected: ' + e.stack)
-		})
+		.then(connection => connection.db(database))
+		.catch(onError)
 }
 
 class MongoCollection {
@@ -85,16 +67,16 @@ class MongoCollection {
 	}
 	#access(action) {
 		if (!this.#privileges[action])
-			throw new Error(`Process has no ${{
+			throw new DatabasePermissionError(`Process has no ${{
 				C: 'insert',
 				R: 'find',
 				U: 'update',
 				D: 'delete'
-			}[action]} privilege to collection ${this.#collectionName}`)
+			}[action]} permission for collection ${this.#collectionName}`)
 	}
 	/**
 	 * 
-	 * @param {Db} connection 
+	 * @param {import('mongodb').Db} connection 
 	 * @param {String} collectionName 
 	 * @param {String} privileges -"crud" 
 	 * @constructor copy crud method from Db.collection(collectionName) 
@@ -111,24 +93,23 @@ class MongoCollection {
 			})
 	}
 	/**
-	 * 
+	 * Insert into collection
 	 * @param {object} arg 
 	 * @param {object} option -insert options
+	 * @returns {Promise<import('mongodb').InsertOneResult> | Promise<import('mongodb').InsertManyResult>}
 	 */
-	insert(arg, option) {
+	async insert(arg, option) {
 		// Check access privilege
 		this.#access('C')
 		// Select method according to input arguments
 		if (Array.isArray(arg)) {
-			return this.#collection.insertMany(arg, option)
+			return await this.#collection.insertMany(arg, option)
+		} else if (arg && typeof arg === 'object') {
+			return await this.#collection.insertOne(arg, option)
+		} else {
+			// No match between given argument type and expected argument types
+			throw new DatabaseOperationError(`Bad arguments for db insert: [${{ arg, option }}]`)
 		}
-		if (arg && typeof arg === 'object') {
-			return this.#collection.insertOne(arg, option)
-		}
-		// No match between given argument type and expected argument types
-		logger.warn(`Illegal input for insert: [${typeof arg} ${arg.toString()}, ${typeof option} ${option.toString()}]`)
-		// Make no changes, return undefined
-		return
 	}
 
 	find(filter, option) {
@@ -144,11 +125,10 @@ class MongoCollection {
 		if (updateFilter && typeof updateFilter === 'object') {
 			if (option?.replace) return this.#collection.replaceOne(filter, updateFilter, option)
 			return this.#collection.updateMany(filter, updateFilter, option)
+		} else {
+			// No match between given argument type and expected argument types
+			throw new DatabaseOperationError(`Bad arguments for db insert: [${{ filter, updateFilter, option }}]`)
 		}
-		// No match between given argument type and expected argument types
-		logger.warn(`Illegal input for update: [${typeof filter} ${filter.toString()}, ${typeof updateFilter} ${updateFilter.toString()}, ${typeof option} ${option.toString()}]`)
-		// Make no changes, return undefined
-		return
 	}
 
 	delete(filter, option) {
@@ -159,7 +139,18 @@ class MongoCollection {
 	}
 }
 
-let connection = await connect(config.mongodb)
+let retryCount = 5
+async function onConnectionError(e) {
+	if (--retryCount <= 0) {
+		throw new Error('Reached maximum db connection count')
+	} else {
+		connection = await connect(config.mongo, onConnectionError)
+		setTimeout(() => {
+			retryCount ++
+		}, 60_000)
+	}
+}
+let connection = await connect(config.mongo, onConnectionError)
 /**
  * @typedef {Object} dbClient
  * @property {MongoCollection} 

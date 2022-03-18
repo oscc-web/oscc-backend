@@ -1,9 +1,6 @@
-import { init } from '../lib/env.js'
 import http from 'http'
 import Test from './Test.js'
 import { resolve } from 'path'
-
-init(import.meta)
 let options = {
 	hostname: '127.0.0.1',
 	port: 9998,

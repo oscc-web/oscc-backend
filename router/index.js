@@ -1,11 +1,12 @@
 // Imports
-import { init, resolveDistPath, config, logger, Rx, IS_DEVELOPMENT_MODE } from '../lib/env.js'
+import { resolveDistPath, config, Rx, IS_DEVELOPMENT_MODE, Args } from '../lib/env.js'
+import logger from '../lib/logger.js'
 import express from 'express'
 // Middleware
 import vhost from './middleware/vhost.js'
 import proxy from './middleware/proxy.js'
 import privileged from './middleware/privileged.js'
-import errorHandler from './middleware/errorHandler.js'
+import errorHandler from '../utils/errorHandler.js'
 // Strategies
 import home from './strategies/home.js'
 import forumPreprocessor from './strategies/forum.js'
@@ -17,10 +18,6 @@ import statusCode from '../lib/status.code.js'
 
 // Extract related configs from user config
 const port = config?.port?.router || 8080
-// Environment setup
-init(import.meta)
-// Boot-up log
-logger.info(`YSYX backend services launched at [${config.mode}] mode`)
 // Compose the server
 express()
 	// Remove express powered-by header

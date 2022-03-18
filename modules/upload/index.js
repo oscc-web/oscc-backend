@@ -1,5 +1,6 @@
 // Environmental setup
-import { init, logger, config, PROJECT_ROOT } from '../../lib/env.js'
+import { config, PROJECT_ROOT } from '../../lib/env.js'
+import logger from '../../lib/logger.js'
 import formidable from 'formidable'
 import fs from 'fs-extra'
 import express from 'express'
@@ -8,7 +9,6 @@ import statusCode from '../../lib/status.code.js'
 // temp storage path
 const tempPath = `${PROJECT_ROOT}/tmp`
 // const storagePath = `${PROJECT_ROOT}/storage`
-init(import.meta)
 logger.info('Staring upload server')
 let appData = new AppData('upload')
 let app = express()
