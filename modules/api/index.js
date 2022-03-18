@@ -1,9 +1,10 @@
 import express, { response } from 'express'
-import { init, logger, config, PROJECT_ROOT } from '../../lib/env.js'
+import { config, PROJECT_ROOT } from '../../lib/env.js'
 import { AppDataWithFs } from '../../lib/appData.js'
 import bodyParser from 'body-parser'
 import statusCode from '../../lib/status.code.js'
-init(import.meta)
+import logger from '../../lib/logger.js'
+import errorHandler from '../../utils/errorHandler.js'
 logger.info('Staring api server')
 let app = express()
 let appDataWithFs = new AppDataWithFs()
@@ -19,7 +20,6 @@ app.post('/user/avatar',
 	async (req, res, next) => {
 		logger.access(`${req.method} ${req.headers.host}${req.url} from ${req.origin}`)
 		let user = JSON.parse(req.internalCookies.user_info)
-		console.log(typeof req.body.fileID)
 		appDataWithFs
 			.acquireFile({ user, action: '/avatar', fileID: req.body.fileID })
 			.then(result => {
@@ -32,10 +32,18 @@ app.post('/user/avatar',
 app.get('/user/avatar',
 	async (req, res, next) => {
 		logger.access(`${req.method} ${req.headers.host}${req.url} from ${req.origin}`)
-		let user = req.internalCookies.user_info
-		let fileInfo = await appDataWithFs.load({ user, action: 'avatar' })
-		if (!fileInfo || fileInfo.temp) return res.sendStatus(404)
-		res.sendFile(`${tempPath}/${fileInfo.filename}`)
+		let user = JSON.parse(req.internalCookies.user_info),
+			fileID = req.query?.fileID
+		appDataWithFs
+			.loadFile({ user, action: '/avatar', fileID })
+			.then(fileInfo => {
+				if (!fileInfo || !fileInfo.acquired) return res.sendStatus(statusCode.ClientError.NotFound)
+				res.sendFile(`${tempPath}/${fileID}`)
+			})
+			.catch(e => {
+				logger.errAcc(`Can not get ${user}'s file ${fileID}: ${e.stack}`)
+				res.sendStatus(statusCode.ServerError.InternalServerError)
+			})
 	}
 )
 app.listen(config.port.api, () => {

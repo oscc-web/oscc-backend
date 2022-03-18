@@ -12,5 +12,6 @@ switch (__action__) {
 		new Process('router')
 		new Process($M('mailer'))
 		new Process($M('upload'))
+		new Process($M('api'))
 		break
 }
