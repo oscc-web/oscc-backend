@@ -147,14 +147,11 @@ const server = express()
 		}
 	)
 	.post('/user', (req, res, next) => {
-		/**
-		 * @type {{session: Session}}
-		 */
 		const { session } = req
 		if (session instanceof Session) {
 			wrap(sendUserInfo(session.user, res))
 		} else {
-			res.status(statusCode.ClientError.NotFound)
+			res.status(statusCode.ClientError.NotFound).end()
 		}
 	})
 	.use(errorHandler)
