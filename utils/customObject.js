@@ -1,4 +1,4 @@
-export default class CustomObject extends Object {
+export default class CustomObject {
 	toString() {
 		return `${this.constructor.name} <${this[Symbol.toStringTag]}>`
 	}
