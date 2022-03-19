@@ -1,7 +1,7 @@
 import logger from '../lib/logger.js'
 
 function errorHandler(e) {
-	logger.warn(`Uncaught error during async execution: ${e?.stack}`)
+	logger.error(`Uncaught error during async execution: ${e?.stack}`)
 }
 /**
  * Warp async function or promise with a fallback error handler

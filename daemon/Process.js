@@ -17,7 +17,26 @@ export default class Process {
 		this.#path = path
 		this.#args = Object.assign({ ...Args, port: undefined, __COMMAND__: 'run' }, args)
 		Process.list.push(this)
-		const proc = this.#launch(detached)
+		this.#launch(detached)
+	}
+	/**
+	 * Timestamp indicating when last unexpected exit happens
+	 */
+	#lastUnexpectedExit
+	/**
+	 * Create a new child process and replace into #proc
+	 */
+	#launch(detached = false) {
+		const { __COMMAND__, ...args } = this.#args
+		const proc = this.#proc = spawn('node', [
+			resolve(PROJECT_ROOT, this.#path),
+			__COMMAND__,
+			...Object.entries(args).map(([el, val]) => {
+				if (el && val !== undefined)
+					return `--${el.toString()}=${val.toString()}`
+			}).filter(el => !!el)
+		], { detached })
+		//
 		if (detached) {
 			// eslint-disable-next-line spellcheck/spell-checker
 			proc.unref()
@@ -36,24 +55,6 @@ export default class Process {
 		}
 	}
 	/**
-	 * Timestamp indicating when last unexpected exit happens
-	 */
-	#lastUnexpectedExit
-	/**
-	 * Create a new child process and replace into #proc
-	 */
-	#launch(detached) {
-		const { __COMMAND__, ...args } = this.#args
-		return this.#proc = spawn('node', [
-			resolve(PROJECT_ROOT, this.#path),
-			__COMMAND__,
-			...Object.entries(args).map(([el, val]) => {
-				if (el && val !== undefined)
-					return `--${el.toString()}=${val.toString()}`
-			}).filter(el => !!el)
-		], { detached })
-	}
-	/**
 	 * Chile process exit handler
 	 * @returns {(code : Number | undefined, signal: NodeJS.Signals) => Any}
 	 */
@@ -70,6 +71,7 @@ export default class Process {
 					// Remove process from list and never try to recover
 					Process.list = Process.list.filter(p => p !== this)
 				} else {
+					logger.warn(`Trying to restart process ${this.#path}`)
 					this.#lastUnexpectedExit = Date.now()
 					this.#launch()
 				}
