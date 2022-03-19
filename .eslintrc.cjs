@@ -47,7 +47,7 @@ module.exports = {
 		'spellcheck/spell-checker': [
 			1,
 			{
-				'comments': true,
+				'comments': false,
 				'strings': false,
 				'identifiers': true,
 				'templates': false,
@@ -69,7 +69,7 @@ module.exports = {
 					'\\.[cm]?js$',
 					'getters?',
 					'setters?',
-					'^std\\w*'
+					'std\\w*'
 				],
 				'skipWordIfMatch': [
 					'ysyx',

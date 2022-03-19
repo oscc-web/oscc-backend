@@ -9,6 +9,8 @@ import { config, Rx } from '../../lib/env.js'
 import { AppData } from '../../lib/appData.js'
 import { seed } from '../../utils/crypto.js'
 import { sendMail } from '../../modules/mailer/lib.js'
+import withSession from '../../lib/middleware/withSession.js'
+import wrap from '../../utils/wrapAsync.js'
 // AppData for current scope
 let appData = new AppData('router/home')
 /**
@@ -16,8 +18,9 @@ let appData = new AppData('router/home')
  */
 const server = express()
 	.use(bodyParser.json({ type: req => req.method === 'POST' }))
+	.use(withSession())
 	.post('/login',
-		async (req, res, next) => {
+		wrap(async (req, res, next) => {
 			let payload = req.body
 			if (!payload || typeof payload !== 'object') {
 				logger.errAcc(`Input: ${payload} is not an object`)
@@ -40,16 +43,16 @@ const server = express()
 						origin: req.origin
 					}
 				).writeToken(res)
-				return res.json({ login: true, userInfo: JSON.stringify(user.info) })
+				return wrap(sendUserInfo(user, res))
 			} else {
 				logger.errAcc(`Failed login attempt for ${user}`)
 			}
 			return res.status(statusCode.ClientError.Unauthorized).end()
-		}
+		})
 	)
 	.post('/logout',
-		async (req, res, next) => {
-			let session = await Session.locate(req)
+		wrap(async (req, res, next) => {
+			const { session } = req
 			if (session instanceof Session) {
 				logger.access(`userID: <${session.userID}> logout`)
 				session.drop()
@@ -58,7 +61,7 @@ const server = express()
 				.cookie(SESSION_TOKEN_NAME, '', { expires: new Date(0) })
 				.status(statusCode.Success.OK)
 				.end()
-		}
+		})
 	)
 	.post('/register',
 		(req, res, next) => {
@@ -83,7 +86,7 @@ const server = express()
 			// check if token exists
 			switch (action) {
 				case 'SEND_MAIL':
-					(async () => {
+					wrap(async () => {
 						if (await User.locate(mail)) {
 							logger.verbose(`mail <${mail}> has already been registered`)
 							return res.status(statusCode.ClientError.BadRequest).end('[1] Mail already used')
@@ -143,9 +146,26 @@ const server = express()
 			}
 		}
 	)
+	.post('/user', (req, res, next) => {
+		const { session } = req
+		if (session instanceof Session) {
+			wrap(sendUserInfo(session.user, res))
+		} else {
+			res.status(statusCode.ClientError.NotFound).end()
+		}
+	})
 	.use(errorHandler)
 // Expose handle function as default export
 export default (req, res, next) => server.handle(req, res, next)
+/**
+ * Send user info as JSON string
+ * @param {User} user 
+ * @param {import('express').Response} res 
+ */
+async function sendUserInfo(user, res) {
+	const { info, userID } = await user
+	return res.json({ userID, ...info })
+}
 /**
  * Check for email validation token and optionally userID
  * @param {{

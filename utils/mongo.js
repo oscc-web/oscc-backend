@@ -15,7 +15,7 @@ const {
 	host = '127.0.0.1',
 	port = 27017,
 	database,
-	options = {}
+	optionss = {}
 } = config.mongo || {}
 // Check for required fields
 if (!(username && password && database)) {
@@ -31,8 +31,8 @@ export class DatabasePermissionError extends Error {}
 */
 export const connectionString = `mongodb://${username}:${encodeURIComponent(password)}@${host}:${port}/${database}`
 /**
- * Merged options with defaults and user options
- * @type {import('mongodb').MongoClientOptions} - mongodb connect options
+ * Merged optionss with defaults and user optionss
+ * @type {import('mongodb').MongoClientOptions} - mongodb connect optionss
  */
 export const connectionOptions = Object.freeze(Object.assign(
 	{
@@ -41,11 +41,11 @@ export const connectionOptions = Object.freeze(Object.assign(
 		connectTimeoutMS: 30000,
 		useUnifiedTopology: true
 	},
-	options
+	optionss
 ))
 /**
  * get connection to mongodb
- * @param {mongo} options - mongodb connect options
+ * @param {mongo} optionss - mongodb connect optionss
  * @param {(e: Error) => Any} onError
  * @return {Promise<Db>}
  */
@@ -56,7 +56,7 @@ export async function connect(onError = () => {}) {
 		.catch(onError)
 }
 
-class MongoCollection {
+export class MongoCollection {
 	#collectionName
 	#collection
 	#privileges = {
@@ -65,6 +65,10 @@ class MongoCollection {
 		U: false,
 		D: false
 	}
+	/**
+	 * Check if instance has appropriate access to given operation
+	 * @param {'C' | 'R' | 'U' | 'D'} action 
+	 */
 	#access(action) {
 		if (!this.#privileges[action])
 			throw new DatabasePermissionError(`Process has no ${{
@@ -75,7 +79,6 @@ class MongoCollection {
 			}[action]} permission for collection ${this.#collectionName}`)
 	}
 	/**
-	 * 
 	 * @param {import('mongodb').Db} connection 
 	 * @param {String} collectionName 
 	 * @param {String} privileges -"crud" 
@@ -94,48 +97,76 @@ class MongoCollection {
 	}
 	/**
 	 * Insert into collection
-	 * @param {object} arg 
-	 * @param {object} option -insert options
+	 * @param {import('mongodb').OptionalId<import('mongodb').Document>} arg 
+	 * @param {import('mongodb').BulkWriteOptions} options -insert optionss
 	 * @returns {Promise<import('mongodb').InsertOneResult> | Promise<import('mongodb').InsertManyResult>}
 	 */
-	async insert(arg, option) {
+	async insert(arg, options) {
 		// Check access privilege
 		this.#access('C')
 		// Select method according to input arguments
 		if (Array.isArray(arg)) {
-			return await this.#collection.insertMany(arg, option)
+			return await this.#collection.insertMany(arg, options)
 		} else if (arg && typeof arg === 'object') {
-			return await this.#collection.insertOne(arg, option)
+			return await this.#collection.insertOne(arg, options)
 		} else {
 			// No match between given argument type and expected argument types
-			throw new DatabaseOperationError(`Bad arguments for db insert: [${{ arg, option }}]`)
+			throw new DatabaseOperationError(`Bad arguments for db insert: [${{ arg, options }}]`)
 		}
 	}
-
-	find(filter, option) {
+	/**
+	 * Find all entries from collection according to filter
+	 * @param {import('mongodb').Filter<import('mongodb').Document>} filter 
+	 * @param {import('mongodb').FindOptions} options 
+	 * @returns {Promise<import('mongodb').FindCursor>}
+	 */
+	find(filter, options) {
 		// Check access privilege
 		this.#access('R')
-		return this.#collection.find(filter, option)
+		return this.#collection.find(filter, options)
 	}
-
-	update(filter, updateFilter, option) {
+	/**
+	 * Update document that matches 
+	 * @param {import('mongodb').Filter<import('mongodb').Document>} filter 
+	 * @param {import('mongodb').UpdateFilter<import('mongodb').Document>} updateFilter 
+	 * @param {import('mongodb').UpdateOptions | {replace: Boolean}} options 
+	 * @returns {Promise<import('mongodb').UpdateResult>}
+	 */
+	update(filter, updateFilter, options) {
 		// Check access privilege
 		this.#access('U')
 		// Select method according to input arguments
 		if (updateFilter && typeof updateFilter === 'object') {
-			if (option?.replace) return this.#collection.replaceOne(filter, updateFilter, option)
-			return this.#collection.updateMany(filter, updateFilter, option)
+			if (options?.replace) return this.#collection.replaceOne(filter, updateFilter, options)
+			return this.#collection.updateMany(filter, updateFilter, options)
 		} else {
 			// No match between given argument type and expected argument types
-			throw new DatabaseOperationError(`Bad arguments for db insert: [${{ filter, updateFilter, option }}]`)
+			throw new DatabaseOperationError(`Bad arguments for db insert: [${{ filter, updateFilter, options }}]`)
 		}
 	}
-
-	delete(filter, option) {
+	/**
+	 * 
+	 * @param {import('mongodb').Filter<import('mongodb').Document>} filter 
+	 * @param {import('mongodb').DeleteOptions} options 
+	 * @returns {Promise<import('mongodb').DeleteResult>}
+	 */
+	delete(filter, options) {
 		// Check access privilege
 		this.#access('D')
 		// Select method according to input arguments
-		return this.#collection.deleteMany(filter, option)
+		return this.#collection.deleteMany(filter, options)
+	}
+	/**
+	 * Create a watcher for this collection
+	 * @param {import('mongodb').Document} pipeline 
+	 * @param {import('mongodb').ChangeStreamOptions} options 
+	 * @returns {import('mongodb').ChangeStream}
+	 */
+	watch(pipeline, options = {}) {
+		// Check access privilege
+		this.#access('R')
+		// Select method according to input arguments
+		return this.#collection.watch(pipeline, options)
 	}
 }
 
@@ -166,7 +197,7 @@ let connection = await connect(config.mongo, onConnectionError)
  * }}
  * @description return value can be used like: value.collectionName.find() similar to db.collectionName.find()
  */
-export default function init(...collectionDescriptor) {
+export default function dbInit(...collectionDescriptor) {
 	// Initialize each descriptor to collection
 	return Object.fromEntries(
 		collectionDescriptor
