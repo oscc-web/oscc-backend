@@ -6,6 +6,8 @@ import fs from 'fs-extra'
 import express from 'express'
 import { AppData } from '../../lib/appData.js'
 import statusCode from '../../lib/status.code.js'
+import wrap from '../../utils/wrapAsync.js'
+import withSession from '../../lib/middleware/withSession.js'
 // temp storage path
 const tempPath = `${PROJECT_ROOT}/tmp`
 // const storagePath = `${PROJECT_ROOT}/storage`
@@ -17,9 +19,9 @@ app.use((req, res, next) => {
 		return logger.warn(`Rejected user not logged in from ${req?.origin}`) && res.status(403).send()
 	}
 	next()
-})
+}).use(withSession())
 app.use((req, res) => {
-	let user = JSON.parse(req.internalCookies.user_info)
+	let user = req.session.user
 	if (req.method === 'PUT') {
 		logger.access(`${req.method} ${req.headers.host}${req.url} from ${req.origin}`)
 		fs.ensureDirSync(tempPath)
@@ -28,7 +30,7 @@ app.use((req, res) => {
 				uploadDir: tempPath
 			},
 			form = new formidable.IncomingForm(options)
-		form.parse(req, async (err, fields, files) => {
+		wrap(form.parse(req, async (err, fields, files) => {
 			if (err) {
 				logger.warn('save file error:', err.stack)
 				res.status(500).send('save file error')
@@ -36,10 +38,10 @@ app.use((req, res) => {
 				if (!files.fileUpload) {
 					return res.sendStatus(statusCode.ClientError.BadRequest)
 				}
-				await appData.store({ user, action: req.url, fileID: files.fileUpload.newFilename }, {  createTime: new Date().getTime(), origin: req.origin, size: files.fileUpload.size, acquired: false })
+				await appData.store({ user, action: req.url, fileID: files.fileUpload.newFilename }, {  createTime: new Date().getTime(), origin: req.origin, size: files.fileUpload.size, acquired: false, type: files.fileUpload.mimetype })
 				res.send(files.fileUpload.newFilename)
 			}
-		})
+		}))
 	} else {
 		logger.warn(`Rejected ${req.method} request from ${req.origin}`)
 		res.status(405).send()
