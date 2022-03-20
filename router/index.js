@@ -49,10 +49,10 @@ express()
 		// Static server can be either a static dist or vite dev server
 		(Args.useDevProxy)
 			// Forward traffic to vite dev server
-			? (
-				logger.info(`YSYX.ORG redirected to development port [${config.devProxy['@']}]`),
-				proxy(config.devProxy['@'])
-			)
+			? (() => {
+				logger.info(`YSYX.ORG redirected to development port [${config.devProxy['@']}]`)
+				return proxy(config.devProxy['@'])
+			})()
 			// Static file server
 			: express.static(resolveDistPath('ysyx')),
 		// Serve index.html
@@ -80,7 +80,7 @@ express()
 		conditional(
 			({ url }) => url.startsWith('/private') || url.startsWith('/internal'),
 			privileged(
-				PRIV.DOCS_PRIVATE_ACCESS, {},
+				PRIV.DOCS_PRIVATE_ACCESS,
 				express.static(resolveDistPath('ysyx.docs'))
 			)
 		).otherwise(

@@ -12,6 +12,7 @@ import { consoleTransport } from '../lib/logger.js'
 import { Writable } from 'stream'
 import { spawn } from 'child_process'
 import { PROJECT_ROOT } from '../lib/env.js'
+import wrap, { setFunctionName } from '../utils/wrapAsync.js'
 // REPL Prompt
 const prompt = ['ysyx'.yellow, '>'.dim, ''].join(' ')
 // REPL Readonly Context
@@ -19,7 +20,7 @@ const context = {
 	PRIV, PRIV_LUT,
 	Session, User, Group, AppData, AppDataWithFs, consoleTransport,
 	db: dbInit('user/CRUD', 'session/CRUD', 'groups/CRUD', 'appData/CRUD', 'log/CRUD'),
-	hash
+	hash, wrap, setFunctionName
 }
 // Create REPL instance
 const rp = repl
@@ -166,8 +167,8 @@ for (const cmd of ['start', 'stop', 'restart', 'run']) {
 			console.log($.flat(Infinity).join(' '))
 			// Spawn the process
 			const proc = spawn(...$, { stdio: ['ignore', 'pipe', 'pipe'] })
-			proc.stdout.pipe(logProxy)
-			proc.stderr.pipe(logProxy)
+			proc.stdout.on('data', logProxy.write.bind(logProxy))
+			proc.stderr.on('data', logProxy.write.bind(logProxy))
 			const on_sig_int = () => {
 				console.log(`SIGINT => ${cmd}`)
 				proc.kill('SIGINT')

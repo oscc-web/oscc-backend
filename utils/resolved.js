@@ -1,6 +1,6 @@
 import CustomObject from './customObject.js'
 import logger from '../lib/logger.js'
-import wrap from './wrapAsync.js'
+import wrap, { setFunctionName } from './wrapAsync.js'
 import { PID } from '../lib/env.js'
 
 export default class Resolved extends CustomObject {
@@ -53,13 +53,13 @@ export default class Resolved extends CustomObject {
 	 * @type {import('../lib/middleware/proxy.js').Resolver}
 	 */
 	get resolver() {
-		return async () => {
+		return setFunctionName(async () => {
 			if (!this.resolved) {
 				logger.warn(`Calling resolver of ${this} before service resolution.`)
 				await this.promise
 			}
 			return this.#dsc
-		}
+		}, `${this}`)
 	}
 	/**
 	 * Create a new pending promise awaiting the resolution of
@@ -102,12 +102,10 @@ export default class Resolved extends CustomObject {
 			// Update current resolved service descriptor
 			Object.assign(this.#dsc, dsc)
 			// Log the update
-			logger.info(`${this} => ${
-				Object
-					.entries(dsc)
-					.map(([el, val])  => `${el}=${val}`)
-					.join(' ')
-			}`)
+			const current = this.toString()
+			new Promise(r => r()).then(() =>
+				logger.info(`${current} => ${this}`)
+			)
 		}
 	}
 	/**
@@ -133,7 +131,7 @@ export default class Resolved extends CustomObject {
 		this.#resolveList.push(resolved)
 		// Query for existing service with a delay of 1 second
 		setTimeout(() => {
-			if (!this.resolved)
+			if (!resolved.resolved)
 				this.ipcCall({ $query: true, service: resolved.serviceName })
 		}, 1000)
 	}

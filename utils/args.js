@@ -19,6 +19,8 @@
  * Controls whether logger will transport to file located in var/log
  * @property {Boolean} [useDevProxy=false]
  * Controls whether front-end dev proxies are honored
+ * @property {Number} [stackTraceLimit=undefined]
+ * Sets the trace limit of error stack
  */
 
 /**
@@ -33,6 +35,7 @@ const args = {
 		logToFile: undefined,
 		logToConsole: undefined,
 		useDevProxy: undefined,
+		stackTraceLimit: undefined,
 	},
 	flags = {
 		help() {
@@ -69,6 +72,12 @@ const args = {
 			arg = JSON.parse(arg)
 			return { logToConsole: arg }
 		},
+		stackTraceLimit(arg) {
+			arg = parseInt(arg) || undefined
+			if (arg)
+				Error.stackTraceLimit = arg
+			return { stackTraceLimit: arg }
+		}
 	},
 	toggles = {
 		h: () => flags.help(),
