@@ -3,12 +3,16 @@ import { spawn } from 'child_process'
 import { resolve } from 'path'
 import logger from '../lib/logger.js'
 export default class Process {
+	// Path to this process's entry point
 	#path
+	get path() { return this.#path }
+	// Command line arguments sent to this process
 	#args
 	/**
 	 * @type {import('child_process').ChildProcessWithoutNullStreams}
 	 */
 	#proc
+	get proc() { return this.#proc }
 	/**
 	 * @param {String} path Entry point path relative to project root
 	 * @param {import('./utils/args.js').Arguments} args List of additional arguments (argv)
@@ -35,17 +39,33 @@ export default class Process {
 				if (el && val !== undefined)
 					return `--${el.toString()}=${val.toString()}`
 			}).filter(el => !!el)
-		], { detached })
-		//
+		], { detached, stdio: detached
+			? ['ignore', 'ignore', 'ignore']
+			: ['pipe', 'pipe', 'pipe', 'ipc']
+		})
+		// Unreference the child process if detach is set to true
 		if (detached) {
 			// eslint-disable-next-line spellcheck/spell-checker
 			proc.unref()
 		}
 		else {
-			proc.on('spawn', () => 
-				logger.info(`Process ${this.#path} launched`)
-			)
-			proc.on('exit', this.onExit())
+			proc
+				.on('spawn', () => logger.info(`Process ${this.#path} launched`))
+				.on('message', (message) => {
+					logger.debug(`IPC Call received form process ${this.#path}: ${JSON.stringify(message)}`)
+					const { $target, ...args } = message
+					Process.list
+						.filter(el => el !== this)
+						.forEach((process) => {
+							try {
+								if (!$target || $target === process.path)
+									process.proc.send(args)
+							} catch (e) {
+								logger.error(`Error forwarding IPC message: ${e.stack}`)
+							}
+						})
+				})
+				.on('exit', this.onExit())
 			// eslint-disable-next-line spellcheck/spell-checker
 			// Stream stdout and stderr to shared output (only in dev mode)
 			if (Args.logToConsole)

@@ -5,8 +5,9 @@ function errorHandler(e) {
 }
 /**
  * Warp async function or promise with a fallback error handler
- * @param {(...Any) => Promise | Promise} fn 
- * @returns {Promise}
+ * @param {import('express').Handler} fn
+ * Can accept any Function or Promise 
+ * @returns {Function | Promise}
  */
 export default function wrap(fn) {
 	if (fn instanceof Promise) {

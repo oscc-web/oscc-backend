@@ -22,8 +22,9 @@ export default async function (req, res, next) {
 				id: session.userID,
 				groups: []
 			}
+		const user = await session.user
 		forumGroupPrivLUT.forEach(([priv, groupName]) => {
-			if (session.user.hasPriv(priv)) {
+			if (user.hasPriv(priv)) {
 				userData.groups.push(groupName)
 			}
 		})

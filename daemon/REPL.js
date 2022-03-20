@@ -1,5 +1,5 @@
 import 'colors'
-import repl, { REPL_MODE_SLOPPY } from 'repl'
+import repl, { REPLServer, REPL_MODE_SLOPPY } from 'repl'
 import Session from '../lib/session.js'
 import User from '../lib/user.js'
 import Group from '../lib/groups.js'
@@ -7,68 +7,70 @@ import { AppData, AppDataWithFs } from '../lib/appData.js'
 import { PRIV, PRIV_LUT } from '../lib/privileges.js'
 import dbInit from '../utils/mongo.js'
 import { hash } from '../utils/crypto.js'
-import { sendMail } from '../modules/mailer/lib.js'
+// import { sendMail } from '../modules/mailer/lib.js'
 import { consoleTransport } from '../lib/logger.js'
 import { Writable } from 'stream'
-import { getLock } from './pidLock.js'
-import { exec, spawn } from 'child_process'
+import { spawn } from 'child_process'
 import { PROJECT_ROOT } from '../lib/env.js'
 // REPL Prompt
 const prompt = ['ysyx'.yellow, '>'.dim, ''].join(' ')
-let cachedStartRow = undefined
+// REPL Readonly Context
+const context = {
+	PRIV, PRIV_LUT,
+	Session, User, Group, AppData, AppDataWithFs, consoleTransport,
+	db: dbInit('user/CRUD', 'session/CRUD', 'groups/CRUD', 'appData/CRUD', 'log/CRUD'),
+	hash
+}
 // Create REPL instance
-const rp = repl.start({
-	prompt,
-	ignoreUndefined: true,
-	useColors: true,
-	preview: true,
-	replMode: REPL_MODE_SLOPPY,
-})
-rp.on('exit', () => process.exit(0))
+const rp = repl
+	.start({
+		prompt,
+		ignoreUndefined: true,
+		useColors: true,
+		preview: true,
+		replMode: REPL_MODE_SLOPPY,
+	})
+	.on('exit', () => process.exit(0))
+	.on('reset', async (ctx) => {
+		rp.pause()
+		rp.clearBufferedCommand()
+		await new Promise(r => process.stdout.cursorTo(0, 0, r))
+		await new Promise(r => process.stdout.clearScreenDown(r))
+		initialize(ctx)
+		rp.displayPrompt()
+		rp.resume()
+	})
+// Overload help command
 rp.defineCommand('help', {
-	help: 'Print help message for ysyx-backend-services REPL',
-	action(str) {
+	action() {
 		this.clearBufferedCommand()
 		console.log(HELP_MESSAGE.yellow)
 		this.displayPrompt()
 	}
 })
-Object
-	.entries({
-		Session, User, Group, AppData, AppDataWithFs, consoleTransport, PRIV, PRIV_LUT, sendMail,
-		db: dbInit('user/CRUD', 'session/CRUD', 'groups/CRUD', 'appData/CRUD', 'log/CRUD'),
-		pwd(str) {
-			return hash(str)
-		}
-	})
-	.forEach(([name, value]) => {
-		if (typeof value === 'object') value = Object.freeze(value)
-		if (typeof value === 'function' && value.length === 0)
-			Object.defineProperty(rp.context, name, {
-				configurable: false,
-				enumerable: true,
-				get: value,
-			})
-		else
-			Object.defineProperty(rp.context, name, {
-				configurable: false,
-				enumerable: true,
-				value
-			})
-	})
-
-const HELP_MESSAGE = `
-Help message for ysyx-backend-services
---------------------------------------
-Keywords:
-  help   	- Show this message
-Objects:
-  db    	- Database entry point
-Available Classes:
-  User   	- The core User class
-  Session	- Session class
-  Group  	- User Group
-`.trim()
+/**
+ * Initialize the REPL context
+ */
+function initialize(ctx){
+	Object
+		.entries(context)
+		.forEach(([name, value]) => {
+			if (typeof value === 'object') value = Object.freeze(value)
+			else if (typeof value === 'function' && value.length)
+				Object.defineProperty(ctx, name, {
+					configurable: false,
+					enumerable: true,
+					value
+				})
+			else
+				Object.defineProperty(ctx, name, {
+					configurable: false,
+					enumerable: true,
+					get: () => (value.bind(rp)(), undefined),
+				})
+		})
+}
+initialize(rp.context)
 // Resume timer
 /**
  * @typedef {{
@@ -135,20 +137,72 @@ const logProxy = new class LogProxy extends Writable {
 		}
 	}
 }
-
+// Redirect console.log to logProxy
 console._stdout = logProxy
-
-for (const cmd of ['start', 'stop', 'restart']) {
+// Initialize server control commands
+for (const cmd of ['start', 'stop', 'restart', 'run']) {
 	rp.defineCommand(cmd, {
 		action(args) {
+			this.pause()
 			this.clearBufferedCommand()
-			const proc = spawn('node', [
+			const node_flags = []
+			const user_args = args.replace(/(^|\s)[:@][\w_-]*/gi, (str) => {
+				node_flags.push(
+					str
+						.trim()
+						.replace(/^:/, '-')
+						.replace(/^@/, '--')
+				)
+				return ''
+			})
+			// Assembly final arguments
+			const $ = ['node', [
+				...node_flags,
 				PROJECT_ROOT,
 				cmd,
-				args
-			])
+				user_args
+			]]
+			// Log the actual command used to spawn the process
+			console.log($.flat(Infinity).join(' '))
+			// Spawn the process
+			const proc = spawn(...$, { stdio: ['ignore', 'pipe', 'pipe'] })
 			proc.stdout.pipe(logProxy)
-			this.displayPrompt()
+			proc.stderr.pipe(logProxy)
+			const on_sig_int = () => {
+				console.log(`SIGINT => ${cmd}`)
+				proc.kill('SIGINT')
+			}
+			proc.on('exit', () => {
+				proc.stdout.pause()
+				proc.stderr.pause()
+				rp.off('SIGINT', on_sig_int)
+				// Resume repl
+				this.displayPrompt()
+				this.resume()
+			})
+			rp.on('SIGINT', on_sig_int)
 		}
 	})
 }
+// Help message for repl
+const HELP_MESSAGE = `
+Help message for ysyx-backend-services
+--------------------------------------
+Commands:
+    .help     - Show this message
+    .start    - Show this message
+    .restart  - Show this message
+    .stop     - Show this message
+
+Classes:
+    User, Session, Group, AppData[WithFs],
+
+Objects:
+    db        - Database entry point
+	PRIV      - List of privileges as Enum<Number>
+	PRIV_LUT  - List of privileges as Enum<String>
+
+
+Functions:
+   pwd()      - Generate sha256 hashed password
+`

@@ -1,6 +1,11 @@
 import http from 'http'
-import { config } from '../../lib/env.js'
+import { config, extractIdentityFromURL } from '../../lib/env.js'
 import statusCode from '../../lib/status.code.js'
+import Resolved from '../../utils/resolved.js'
+// Get PID of target service
+const servicePID = extractIdentityFromURL(import.meta.url.replace('lib.js', ''))
+// Create a pending service resolution
+const resolver = new Resolved(servicePID, false).resolver
 /**
  * @typedef {('validateMail' | 'XXX')} mailTemplate
  */
@@ -12,11 +17,12 @@ import statusCode from '../../lib/status.code.js'
  * @param {Object} args 
  */
 export async function sendMail(address, template, args) {
+	const target = await resolver()
 	return new Promise((resolve, reject) => {
 		http
 			.request({
 				hostname: '127.0.0.1',
-				port: config.port.mailer,
+				...target,
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' }
 			}, res => {

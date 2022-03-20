@@ -38,7 +38,7 @@ switch (__COMMAND__) {
 		}
 		logger.info('Restarting YSYX backend services')
 		await setLock()
-		new Process('.', { detached: true, logToConsole: false })
+		new Process('.', { detached: true, logToConsole: false, port: Args.port })
 		process.exit(0)
 		break
 	case 'run':
