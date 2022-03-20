@@ -93,7 +93,7 @@ const server = express()
 						}
 						token = seed(6)
 						appData
-							.store({ token }, { mail, action: 'validate-mail' }, { replace: true })
+							.store({ mail, action: 'validate-mail' }, { token }, { replace: true })
 							.then(({ acknowledged } = {}) => {
 								if (acknowledged) {
 									const link = `/register?token=${token}&mail=${Buffer.from(mail).toString('base64')}`
@@ -184,6 +184,7 @@ async function sendUserInfo(user, res) {
 async function validateRegisterPayload(payload, res, next) {
 	const { mail, token, userID, ...args } = payload
 	let content = await appData.load({ mail, action: 'validate-mail' })
+	logger.info(content)
 	if (!content || content.token !== token) {
 		logger.errAcc(`Failed to validate token <${token}> attached with mail <${mail}>`)
 		return res.status(statusCode.ClientError.BadRequest).end('[1] Token not valid')
