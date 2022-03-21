@@ -57,17 +57,23 @@ function initialize(ctx){
 		.entries(context)
 		.forEach(([name, value]) => {
 			if (typeof value === 'object') value = Object.freeze(value)
-			else if (typeof value === 'function' && value.length)
+			if (typeof value === 'function' && value.length)
 				Object.defineProperty(ctx, name, {
 					configurable: false,
 					enumerable: true,
 					value
 				})
-			else
+			else if (typeof value === 'function')
 				Object.defineProperty(ctx, name, {
 					configurable: false,
 					enumerable: true,
 					get: () => (value.bind(rp)(), undefined),
+				})
+			else
+				Object.defineProperty(ctx, name, {
+					configurable: false,
+					enumerable: true,
+					value,
 				})
 		})
 }
