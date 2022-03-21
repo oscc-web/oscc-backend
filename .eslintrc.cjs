@@ -61,7 +61,8 @@ module.exports = {
 					'deployer',
 					'satisfiable',
 					'unprocessable',
-					'jsonwebtoken'
+					'jsonwebtoken',
+					'uploader'
 				],
 				'skipIfMatch': [
 					'http://[^s]*',

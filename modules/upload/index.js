@@ -3,28 +3,26 @@ import { config, PID, PROJECT_ROOT } from '../../lib/env.js'
 import logger from '../../lib/logger.js'
 import formidable from 'formidable'
 import fs from 'fs-extra'
-import { CronJob } from 'cron'
 import express from 'express'
+import { AppData } from '../../lib/appData.js'
+import statusCode from '../../lib/status.code.js'
+import wrap from '../../utils/wrapAsync.js'
+import withSession from '../../lib/middleware/withSession.js'
 import Resolved from '../../utils/resolved.js'
 // temp storage path
 const tempPath = `${PROJECT_ROOT}/tmp`
 // const storagePath = `${PROJECT_ROOT}/storage`
-// database init
-import dbInit from '../../utils/mongo.js'
-let db = await dbInit('upload/crud')
-logger.info('Starting service')
-const server = express()
-	.use((req, res, next) => {
-		if (!req?.internalCookies?.user_info) {
-			return logger.warn(`Rejected user not logged in from ${req?.origin}`) && res.status(403).send()
-		}
-		next()
-	})
-	.use('/', (req, res) => {
-		let params = new URLSearchParams(req.url.split('?')[1]),
-			user = JSON.parse(req.internalCookies.user_info),
-			filePurpose = params.get('for')
-		if (req.method === 'POST') {
+logger.info('Staring upload server')
+let appData = new AppData('upload')
+const server = express().use((req, res, next) => {
+	if (!req?.internalCookies?.user_info) {
+		return logger.warn(`Rejected user not logged in from ${req?.origin}`) && res.status(403).send()
+	}
+	next()
+}).use(withSession())
+	.use((req, res) => {
+		let user = req.session.user
+		if (req.method === 'PUT') {
 			logger.access(`${req.method} ${req.headers.host}${req.url} from ${req.origin}`)
 			fs.ensureDirSync(tempPath)
 			let
@@ -32,79 +30,37 @@ const server = express()
 					uploadDir: tempPath
 				},
 				form = new formidable.IncomingForm(options)
-			form.parse(req, async (err, fields, files) => {
+			wrap(form.parse(req, async (err, fields, files) => {
 				if (err) {
 					logger.warn('save file error:', err.stack)
 					res.status(500).send('save file error')
 				} else {
-					try {
-						let records = await db.upload.find({ userID: user.id, for: filePurpose }).toArray()
-						if (records.length) {
-							records.forEach(file => {
-								fs.removeSync(tempPath + '/' + file._id)
-							})
-							await db.upload.delete({ userID: user.id, for: filePurpose })
-						}
-						await db.upload.insert({ _id: files.fileUpLoad.newFilename, userID: user.id, createTime: new Date().getTime(), for: filePurpose, type: 'temp' })
-					} catch (e) {
-						return logger.warn(`Failed to insert file information into database: ${e.stack}`) && res.status(500).send()
+					if (!files.fileUpload) {
+						return res.sendStatus(statusCode.ClientError.BadRequest)
 					}
-					res.send(files.fileUpLoad.newFilename)
+					await appData.store({ user, action: req.url, fileID: files.fileUpload.newFilename }, {  createTime: new Date().getTime(), origin: req.origin, size: files.fileUpload.size, acquired: false, type: files.fileUpload.mimetype })
+					res.send(files.fileUpload.newFilename)
 				}
-			})
-		} else if (req.method === 'PUT') {
-			const body = []
-			logger.access(`${req.method} ${req.headers.host}${req.url} from ${req.origin}`)
-			req
-				.on('data', chunk => body.push(chunk))
-				.on('end', () => {
-					const payload = JSON.parse(body.join(''))
-					if (!payload || typeof payload !== 'object')
-					// Payload is not a valid JSON object
-						return logger.warn('Request payload is not an JSON object: ' + JSON.stringify(payload)) && res.status(400).send()
-					if (payload.fileType !== 'persistent' && payload.fileType !== 'temp')
-						return logger.warn('fileType is invalid: ' + JSON.stringify(payload)) && res.status(400).send()
-					// update record of file in database
-					db.upload
-						.find({ _id: payload.fileID })
-						.toArray()
-						.then(result => {
-							if (!result.length) {
-								logger.warn(`File not found _id: ${payload.fileID}`)
-								res.status(404).send()
-							} else {
-								db.upload
-									.update({ _id: payload.fileID }, { $set: { type: payload.fileType } })
-									.then(() => {
-										res.status(200).send()
-									})
-									.catch(e => {
-										logger.warn(`Failed to update file _id: ${payload.fileID}, error: ${e.stack}`)
-										res.status(500).send()
-									})
-							}
-						})
-				})
+			}))
 		} else {
 			logger.warn(`Rejected ${req.method} request from ${req.origin}`)
 			res.status(405).send()
 		}
 	})
-// Start the server using Resolved
 Resolved.launch(server)
 // scheduled deletion
-const expireTime = config.upload.expireTime //milliseconds
-const job = new CronJob(config.upload.cron, () => {
-	let now = new Date().getTime()
-	db.upload
-		.find({ type: 'temp', createTime: { $lt: now - expireTime } })
-		.toArray()
-		.then(files => {
-			files.forEach(file => fs.remove(`${PROJECT_ROOT}/tmp/${file._id}`))
-			db.upload.delete({ type: 'temp', createTime: { $lt: now - expireTime } })
-		})
-		.catch(e => {
-			logger.warn(`scheduled file deletion error: ${e.stack}`)
-		})
-}, null, true, 'Asia/Shanghai')
-job.start()
+// const expireTime = config.upload.expireTime //milliseconds
+// const job = new CronJob(config.upload.cron, () => {
+// 	let now = new Date().getTime()
+// 	db.upload
+// 		.find({ type: 'temp', createTime: { $lt: now - expireTime } })
+// 		.toArray()
+// 		.then(files => {
+// 			files.forEach(file => fs.remove(`${PROJECT_ROOT}/tmp/${file._id}`))
+// 			db.upload.delete({ type: 'temp', createTime: { $lt: now - expireTime } })
+// 		})
+// 		.catch(e => {
+// 			logger.warn(`scheduled file deletion error: ${e.stack}`)
+// 		})
+// }, null, true, 'Asia/Shanghai')
+// job.start()

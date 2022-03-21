@@ -10,6 +10,7 @@ export async function startServer() {
 	new Process('router', { port: Args.port || config.port, cluster: 10 })
 	new Process($M('mailer'))
 	new Process($M('upload'))
+	new Process($M('api'))
 }
 /**
  * @typedef 
