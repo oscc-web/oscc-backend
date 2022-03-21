@@ -3,7 +3,7 @@ import nodemailer from 'nodemailer'
 import fs from 'fs'
 import soda from 'sodajs/dist/soda.node.js'
 // Environmental setup
-import { config, PROJECT_ROOT, DOMAIN, PID } from '../../lib/env.js'
+import { config, PROJECT_ROOT, DOMAIN } from '../../lib/env.js'
 import logger from '../../lib/logger.js'
 import statusCode from '../../lib/status.code.js'
 import errorHandler from '../../utils/errorHandler.js'

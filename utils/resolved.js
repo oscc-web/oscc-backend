@@ -1,7 +1,10 @@
 import CustomObject from './customObject.js'
 import logger from '../lib/logger.js'
 import wrap, { setFunctionName } from './wrapAsync.js'
-import { PID } from '../lib/env.js'
+import { PID, Args } from '../lib/env.js'
+import cluster from 'cluster'
+import { createServer } from 'http'
+import initIPC from './ipcInit.js'
 
 export default class Resolved extends CustomObject {
 	/**
@@ -56,7 +59,7 @@ export default class Resolved extends CustomObject {
 		return setFunctionName(async () => {
 			if (!this.resolved) {
 				logger.warn(`Calling resolver of ${this} before service resolution.`)
-				await this.promise
+				await this.#promise
 			}
 			return this.#dsc
 		}, `${this}`)
@@ -150,21 +153,78 @@ export default class Resolved extends CustomObject {
 	 * @returns {Promise<Number>} port number
 	 */
 	static async launch(server, name = PID) {
-		await new Promise(res => server = server.listen(0, res))
-		const { port } = server.address()
-		const announcement = { service: name, port }
-		this.ipcCall(announcement)
-		// Listen for later initialized service query
-		process.on('message', ({ $, $query, service }) => {
-			if ($ === this.name && $query && name === service)
-				this.ipcCall(announcement)
-		})
-		// Log the launched server
-		logger.info(`Service up and running at port ${port}`)
-		// Return the port number
-		return port
+		const announcement = { service: name }
+		if (cluster.isPrimary && Args.cluster) {
+			const dummyServer = createServer()
+			await new Promise(r => dummyServer.listen(Args.port || 0, r))
+			let lastUnexpectedExit = performance.now()
+			const workers = [], createClusterWorker = (CLUSTER_ID) => {
+				const worker = initIPC.bind(cluster.fork({ CLUSTER_ID }))(
+					PID,
+					() => workers.map(worker => [PID, worker])
+				).on('listening', ({ port }) => {
+					if (announcement.port !== port) {
+						announcement.port = port
+						this.ipcCall(announcement)
+					}
+				}).on('exit', (code, signal) => {
+					logger[['info', 'warn'][!!code]](
+						`ClusterWorker exited with code ${code}, signal ${signal}`
+					)
+					// Remove this dead worker
+					delete workers[CLUSTER_ID]
+					if (code) {
+						// Try to resume
+						if (performance.now() - lastUnexpectedExit < 60_000) {
+							// Set restart timer for this worker
+							setTimeout(() => {
+								createClusterWorker(CLUSTER_ID)
+							}, 60_000)
+						} else {
+							createClusterWorker(CLUSTER_ID)
+						}
+					}
+					if (workers.filter(w => !!w).length === 0) process.exit(code)
+				})
+				return workers[CLUSTER_ID] = worker
+			}
+			for (const CLUSTER_ID of [...Array(Args.cluster).keys()]) {
+				workers[CLUSTER_ID] = createClusterWorker(CLUSTER_ID)
+			}
+			await new Promise(r => dummyServer.close(r))
+			logger.info(`Cluster initialized with ${Args.cluster} instances`)
+			// Forward upstream IPC message to children
+			process.on('message', message => workers.forEach(wrap(worker => worker.send(message))))
+		} else if (cluster.isWorker) {
+			// Clustered instance for this service
+			server = server.listen(Args.port || 0, () => {
+				const { port } = server.address()
+				logger.info(`ClusterWorker/${process.env.CLUSTER_ID} (${process.pid}) launched on port ${port}`)
+			})
+		} else {
+			// Standalone instance for this service
+			await new Promise(res => server = server.listen(Args.port || 0, res))
+			const port = announcement.port = server.address().port
+			// Log the launched server
+			logger.info(`Standalone service up and running at port ${port}`)
+			// Return the port number
+		}
+		if (!cluster.isWorker) {
+			// Announce service
+			this.ipcCall(announcement)
+			// Listen for later initialized service query
+			process.on('message', ({ $, $query, service }) => {
+				if ($ === this.name && $query && name === service)
+					this.ipcCall(announcement)
+			})
+		}
+		return announcement.port
 	}
-	static ipcCall({ ...args }) {
+	/**
+	 * Send an ipc call with '$' assigned with self class name
+	 * @param {Object} args 
+	 */
+	static ipcCall(args) {
 		try {
 			process.send({
 				...args,

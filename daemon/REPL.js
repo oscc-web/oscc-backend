@@ -1,5 +1,5 @@
 import 'colors'
-import repl, { REPLServer, REPL_MODE_SLOPPY } from 'repl'
+import repl, { REPL_MODE_SLOPPY } from 'repl'
 import Session from '../lib/session.js'
 import User from '../lib/user.js'
 import Group from '../lib/groups.js'
@@ -14,12 +14,14 @@ import { Writable } from 'stream'
 import { spawn } from 'child_process'
 import { PROJECT_ROOT } from '../lib/env.js'
 import wrap, { setFunctionName } from '../utils/wrapAsync.js'
+import Process from './Process.js'
+import * as daemon from '../index.js'
 // REPL Prompt
 const prompt = ['ysyx'.yellow, '>'.dim, ''].join(' ')
 // REPL Readonly Context
 const context = {
-	PRIV, PRIV_LUT,
-	Session, User, Group, AppData, AppDataWithFs, consoleTransport,
+	PRIV, PRIV_LUT, daemon,
+	Session, User, Group, AppData, AppDataWithFs, consoleTransport, Process,
 	db: dbInit('user/CRUD', 'session/CRUD', 'groups/CRUD', 'appData/CRUD', 'log/CRUD'),
 	hash, wrap, setFunctionName
 }
@@ -57,7 +59,7 @@ function initialize(ctx){
 	Object
 		.entries(context)
 		.forEach(([name, value]) => {
-			if (typeof value === 'object') value = Object.freeze(value)
+			// if (typeof value === 'object') value = Object.freeze(value)
 			if (typeof value === 'function' && value.length)
 				Object.defineProperty(ctx, name, {
 					configurable: false,

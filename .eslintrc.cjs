@@ -58,6 +58,7 @@ module.exports = {
 					'mongodb',
 					'nodebb',
 					'wildcard',
+					'deployer',
 					'satisfiable',
 					'unprocessable',
 					'jsonwebtoken',
