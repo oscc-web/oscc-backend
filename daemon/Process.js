@@ -2,7 +2,9 @@ import { config, IS_DEVELOPMENT_MODE, PROJECT_ROOT, Args } from '../lib/env.js'
 import { spawn } from 'child_process'
 import { resolve } from 'path'
 import logger from '../lib/logger.js'
-export default class Process {
+import initIPC from '../utils/ipcInit.js'
+import CustomObject from '../utils/customObject.js'
+export default class Process extends CustomObject {
 	// Path to this process's entry point
 	#path
 	get path() { return this.#path }
@@ -14,23 +16,34 @@ export default class Process {
 	#proc
 	get proc() { return this.#proc }
 	/**
-	 * @param {String} path Entry point path relative to project root
-	 * @param {import('./utils/args.js').Arguments} args List of additional arguments (argv)
+	 * @typedef {import('../utils/args.js').Arguments} ProcessAdditionalArguments 
+	 * @property {Boolean} [detached]
+	 * Indicates whether the process will be detached from current process.
+	 * This is designed to be used along with 'start', 'restart' or 'stop'
+	 * @property {Object} [env]
+	 * Additional environment variables, can be accessed as process.env in child process
 	 */
-	constructor(path, { detached = false, ...args } = {}) {
+	/**
+	 * @param {String} path Entry point path relative to project root
+	 * @param {ProcessAdditionalArguments} [_args] List of additional arguments (argv)
+	 */
+	constructor(path, _args = {}) {
+		super()
+		const { detached, env, ...args } = _args
 		this.#path = path
 		this.#args = Object.assign({ ...Args, port: undefined, __COMMAND__: 'run' }, args)
-		Process.list.push(this)
-		this.#launch(detached)
+		Process.push(this)
+		this.#launch(env, detached)
 	}
 	/**
 	 * Timestamp indicating when last unexpected exit happens
+	 * @type {Number | undefined}
 	 */
 	#lastUnexpectedExit
 	/**
 	 * Create a new child process and replace into #proc
 	 */
-	#launch(detached = false) {
+	#launch(env, detached = false) {
 		const { __COMMAND__, ...args } = this.#args
 		const proc = this.#proc = spawn('node', [
 			resolve(PROJECT_ROOT, this.#path),
@@ -39,33 +52,20 @@ export default class Process {
 				if (el && val !== undefined)
 					return `--${el.toString()}=${val.toString()}`
 			}).filter(el => !!el)
-		], { detached, stdio: detached
-			? ['ignore', 'ignore', 'ignore']
-			: ['pipe', 'pipe', 'pipe', 'ipc']
+		], {
+			detached,
+			env: env ? { ...process.env, ...env } : undefined,
+			stdio: detached ? 'ignore' : ['pipe', 'pipe', 'pipe', 'ipc']
 		})
 		// Unreference the child process if detach is set to true
 		if (detached) {
+			logger.debug(`Fully detached from ${proc.pid} (${this.#path})`)
 			// eslint-disable-next-line spellcheck/spell-checker
 			proc.unref()
-		}
-		else {
-			proc
+		} else {
+			initIPC.bind(proc)(this.path, Process)
 				.on('spawn', () => logger.info(`Process ${this.#path} launched`))
-				.on('message', (message) => {
-					logger.debug(`IPC Call received form process ${this.#path}: ${JSON.stringify(message)}`)
-					const { $target, ...args } = message
-					Process.list
-						.filter(el => el !== this)
-						.forEach((process) => {
-							try {
-								if (!$target || $target === process.path)
-									process.proc.send(args)
-							} catch (e) {
-								logger.error(`Error forwarding IPC message: ${e.stack}`)
-							}
-						})
-				})
-				.on('exit', this.onExit())
+				.on('exit', this.onExit(env))
 			// eslint-disable-next-line spellcheck/spell-checker
 			// Stream stdout and stderr to shared output (only in dev mode)
 			if (Args.logToConsole)
@@ -78,7 +78,7 @@ export default class Process {
 	 * Chile process exit handler
 	 * @returns {(code : Number | undefined, signal: NodeJS.Signals) => Any}
 	 */
-	onExit() {
+	onExit(env) {
 		return (code, signal) => {
 			if (!Process.SIGINT) {
 				const lastUnexpectedExit = this.#lastUnexpectedExit, coolDown = config.processRestartCoolDownPeriodMs || 60_000
@@ -89,11 +89,11 @@ export default class Process {
 				if (lastUnexpectedExit && lastUnexpectedExit + coolDown > Date.now()){
 					logger.error(`Process ${this.#path} frequently exits, terminating this process.`)
 					// Remove process from list and never try to recover
-					Process.list = Process.list.filter(p => p !== this)
+					Process.remove(this)
 				} else {
 					logger.warn(`Trying to restart process ${this.#path}`)
 					this.#lastUnexpectedExit = Date.now()
-					this.#launch()
+					this.#launch(env)
 				}
 			} else {
 				logger.info(`Process ${this.#path} exited on ${signal} (${code})`)
@@ -121,11 +121,6 @@ export default class Process {
 		)
 		return this
 	}
-
-	detach() {
-		const proc = this.#proc
-		proc.detach()
-	}
 	/**
 	 * Kill this process using given signal
 	 * @param {NodeJS.Signals} signal 
@@ -136,6 +131,7 @@ export default class Process {
 			this.#proc.on('exit', res)
 			this.#proc.on('error', rej)
 			this.#proc.kill(signal)
+			logger.debug(`SIGINT sent to pid ${this.#proc.pid}`)
 		})
 	}
 	// Static methods and processes
@@ -143,19 +139,24 @@ export default class Process {
 	 * list of currently active child processes
 	 * @type {Process[]}
 	 */
-	static list = []
+	static #list = []
+	static get list() { return this.#list }
+	static push(process) { this.#list.push(process) }
+	static remove(process) {this.#list = this.#list.filter(p => p !== process)}
 	/**
 	 * Boolean flag indicating if SIG_INT has been received.
 	 */
 	static #SIGINT = false
-	static get SIGINT() {
-		return this.#SIGINT
-	}
-	static set SIGINT(val) {
-		if (this.SIGINT && !val) throw new TypeError('SIGINT can not be turned off once triggered')
-		// First SIGINT received, try to terminate all processes and exit gracefully
+	static #debounce = performance.now() + 200
+	static SIGINT() {
+		// Check if SIGINT is triggered too frequently
+		if (performance.now() < this.#debounce) return
+		this.#debounce = performance.now() + 200
+		process.stdout.write('\n')
+		// Log the signal
 		logger.info('Received SIG_INT.')
-		if (!this.SIGINT) {
+		// First SIGINT received, try to terminate all processes and exit gracefully
+		if (!this.#SIGINT) {
 			logger.info('Gracefully exiting, press CTRL-C again to exit immediately.')
 			Promise
 				.all(this.list.map(proc => proc.kill('SIGINT')))
@@ -168,24 +169,27 @@ export default class Process {
 				})
 		}
 		// Second SIGINT received, exit anyway
-		else if (val) {
+		else {
 			logger.warn('Force exiting.')
 			process.exit(1)
 		}
 		// Set SIGINT according to val
-		this.#SIGINT = !!val
+		this.#SIGINT = true
+	}
+	// Object naming rules
+	get [Symbol.toStringTag]() { return `${this.proc.pid} ${this.path}` }
+	// Iterator that returns [...['$id', 'proc']]
+	static get [Symbol.iterator]() {
+		return (function* () {
+			for (const { path, proc } of this.#list) {
+				logger.silly(`YIELD ${proc.constructor.name} ${path}`)
+				yield [path, proc]
+			}
+			return { done: true }
+		}).bind(this)()
 	}
 }
 /**
  * Exit listener
  */
-process.on('SIGINT', (() => {
-	let deBounce = performance.now() + 200
-	return () => {
-		if (performance.now() > deBounce) {
-			process.stdout.write('\n')
-			Process.SIGINT = true
-		}
-		deBounce = performance.now() + 200
-	}
-})())
+process.on('SIGINT', Process.SIGINT.bind(Process))

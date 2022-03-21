@@ -11,7 +11,7 @@
  * The port number to which current listens
  * @property {'127.0.0.1' | '0.0.0.0'} [host='127.0.0.1']
  * The incoming host the server listens to, defaults to local host
- * @property {Number} [cluster=0]
+ * @property {Number} [cluster=undefined]
  * Number of cluster workers for current module, set to 0 if cluster is not needed
  * @property {Boolean} [logToFile=false]
  * Controls whether logger will transport to file located in var/log
@@ -28,10 +28,11 @@
  */
 const args = {
 		__COMMAND__: 'start',
-		mode: 'PRODUCTION',
+		mode: process.env.NODE_ENV || 'PRODUCTION',
 		logLevel: undefined,
 		port: undefined,
 		host: '127.0.0.1',
+		cluster: undefined,
 		logToFile: undefined,
 		logToConsole: undefined,
 		useDevProxy: undefined,
@@ -43,8 +44,10 @@ const args = {
 			process.exit(0)
 		},
 		mode(mode) {
+			const is_production_mode = !/^dev/i.test(mode)
+			process.env.NODE_ENV = is_production_mode ? 'production' : 'development'
 			return {
-				mode: /^dev/i.test(mode) ? 'DEVELOPMENT' : 'PRODUCTION'
+				mode: process.env.NODE_ENV.toUpperCase()
 			}
 		},
 		useDevProxy(arg = true) {
@@ -58,8 +61,12 @@ const args = {
 			port = parseInt(port)
 			if (port)
 				return { port }
-			else 
+			else
 				throw new TypeError(`Bad port number: ${port}`)
+		},
+		cluster(arg = 1) {
+			arg = parseInt(arg)
+			return { cluster: arg }
 		},
 		logLevel(logLevel) {
 			return { logLevel }
@@ -83,9 +90,9 @@ const args = {
 		h: () => flags.help(),
 		l: () => flags.logToConsole(),
 		L: () => flags.logToFile(),
-		d: () => [flags.mode('DEVELOPMENT'), flags.useDevProxy(), flags.logLevel('debug')],
+		d: () => [flags.mode('DEVELOPMENT'), flags.logLevel('debug')],
 		v: () => flags.logLevel('verbose'),
-		D: () => [flags.mode('DEVELOPMENT'), flags.logLevel('debug')],
+		D: () => [flags.mode('DEVELOPMENT'), flags.useDevProxy(), flags.logLevel('debug')],
 		p: () => [flags.useDevProxy()],
 	},
 	commands = {

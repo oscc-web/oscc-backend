@@ -22,7 +22,7 @@ import Resolved from '../utils/resolved.js'
 // Extract related configs from user config
 const port = Args.port || config.port || 8000
 // Compose the server
-express()
+const server = express()
 	// Remove express powered-by header
 	.disable('x-powered-by')
 	// Preprocessor and access logger
@@ -121,4 +121,4 @@ express()
 	// Request error handler
 	.use(errorHandler)
 	// Open listening port
-	.listen(port, () => logger.info(`Service up and running at port ${port}`))
+Resolved.launch(server)

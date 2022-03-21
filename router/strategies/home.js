@@ -102,7 +102,7 @@ const server = express()
 										.catch((e) => {
 											logger.error(`Error calling @mailer with args ${
 												JSON.stringify({ mail, link })
-											}: ${e.message}`)
+											}: ${e.stack}`)
 											res.status(statusCode.ServerError.InternalServerError).end('[X] Internal Server Error')
 										})
 								} else {
