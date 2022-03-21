@@ -1,5 +1,5 @@
 // Environmental setup
-import { config, PROJECT_ROOT } from '../../lib/env.js'
+import { config, PID, PROJECT_ROOT } from '../../lib/env.js'
 import logger from '../../lib/logger.js'
 import formidable from 'formidable'
 import fs from 'fs-extra'
@@ -8,48 +8,46 @@ import { AppData } from '../../lib/appData.js'
 import statusCode from '../../lib/status.code.js'
 import wrap from '../../utils/wrapAsync.js'
 import withSession from '../../lib/middleware/withSession.js'
+import Resolved from '../../utils/resolved.js'
 // temp storage path
 const tempPath = `${PROJECT_ROOT}/tmp`
 // const storagePath = `${PROJECT_ROOT}/storage`
 logger.info('Staring upload server')
 let appData = new AppData('upload')
-let app = express()
-app.use((req, res, next) => {
+const server = express().use((req, res, next) => {
 	if (!req?.internalCookies?.user_info) {
 		return logger.warn(`Rejected user not logged in from ${req?.origin}`) && res.status(403).send()
 	}
 	next()
 }).use(withSession())
-app.use((req, res) => {
-	let user = req.session.user
-	if (req.method === 'PUT') {
-		logger.access(`${req.method} ${req.headers.host}${req.url} from ${req.origin}`)
-		fs.ensureDirSync(tempPath)
-		let
-			options = {
-				uploadDir: tempPath
-			},
-			form = new formidable.IncomingForm(options)
-		wrap(form.parse(req, async (err, fields, files) => {
-			if (err) {
-				logger.warn('save file error:', err.stack)
-				res.status(500).send('save file error')
-			} else {
-				if (!files.fileUpload) {
-					return res.sendStatus(statusCode.ClientError.BadRequest)
+	.use((req, res) => {
+		let user = req.session.user
+		if (req.method === 'PUT') {
+			logger.access(`${req.method} ${req.headers.host}${req.url} from ${req.origin}`)
+			fs.ensureDirSync(tempPath)
+			let
+				options = {
+					uploadDir: tempPath
+				},
+				form = new formidable.IncomingForm(options)
+			wrap(form.parse(req, async (err, fields, files) => {
+				if (err) {
+					logger.warn('save file error:', err.stack)
+					res.status(500).send('save file error')
+				} else {
+					if (!files.fileUpload) {
+						return res.sendStatus(statusCode.ClientError.BadRequest)
+					}
+					await appData.store({ user, action: req.url, fileID: files.fileUpload.newFilename }, {  createTime: new Date().getTime(), origin: req.origin, size: files.fileUpload.size, acquired: false, type: files.fileUpload.mimetype })
+					res.send(files.fileUpload.newFilename)
 				}
-				await appData.store({ user, action: req.url, fileID: files.fileUpload.newFilename }, {  createTime: new Date().getTime(), origin: req.origin, size: files.fileUpload.size, acquired: false, type: files.fileUpload.mimetype })
-				res.send(files.fileUpload.newFilename)
-			}
-		}))
-	} else {
-		logger.warn(`Rejected ${req.method} request from ${req.origin}`)
-		res.status(405).send()
-	}
-})
-app.listen(config.port.upload, () => {
-	logger.info(`Upload server up and running at port ${config.port.upload}`)
-})
+			}))
+		} else {
+			logger.warn(`Rejected ${req.method} request from ${req.origin}`)
+			res.status(405).send()
+		}
+	})
+Resolved.launch(server)
 // scheduled deletion
 // const expireTime = config.upload.expireTime //milliseconds
 // const job = new CronJob(config.upload.cron, () => {

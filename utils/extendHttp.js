@@ -4,10 +4,11 @@ import { Rx } from '../lib/env.js'
 IncomingMessage.prototype.__defineGetter__(
 	'origin',
 	function () {
-		return undefined
+		const origin = undefined
 			|| this.headers['x-forwarded-for']
 			|| this.socket.remoteAddress
 			|| this.ip
+		return origin.replace(/^((0000|ffff)?:)*/gi, '')
 	}
 )
 

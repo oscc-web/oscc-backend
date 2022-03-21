@@ -118,8 +118,8 @@ const server = express()
 					})
 					break
 				case 'CREATE_ACCOUNT':
-					validateRegisterPayload(payload, res, async ({ mail, userID, password }) => {
-						const user = new User({ userID, mail })
+					validateRegisterPayload(payload, res, async ({ mail, userID, password, name }) => {
+						const user = new User({ userID, mail, name })
 						try {
 							user.password = password
 						} catch (e) {

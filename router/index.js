@@ -16,10 +16,11 @@ import { PRIV } from '../lib/privileges.js'
 import statusCode from '../lib/status.code.js'
 import conditional from '../lib/middleware/conditional.js'
 import withSession from '../lib/middleware/withSession.js'
+import Resolved from '../utils/resolved.js'
 // Standard error handler
 
 // Extract related configs from user config
-const port = Args.port || config?.port?.router || 8000
+const port = Args.port || config.port || 8000
 // Compose the server
 express()
 	// Remove express powered-by header
@@ -49,11 +50,8 @@ express()
 		(Args.useDevProxy)
 			// Forward traffic to vite dev server
 			? (() => {
-				logger.info(`YSYX.ORG redirected to development port [${config.port.vite}]`)
-				return proxy(req => ({
-					hostname: '127.0.0.1',
-					port: config.port.vite
-				}))
+				logger.info(`YSYX.ORG redirected to development port [${config.devProxy['@']}]`)
+				return proxy(config.devProxy['@'])
 			})()
 			// Static file server
 			: express.static(resolveDistPath('ysyx')),
@@ -81,11 +79,12 @@ express()
 		// Privileged access filter
 		conditional(
 			({ url }) => url.startsWith('/private') || url.startsWith('/internal'),
-			privileged(PRIV.DOCS_PRIVATE_ACCESS, {}, express.static(resolveDistPath('ysyx.docs')))
-		),
-		// Static file server
-		conditional(
-			({ url }) => !url.startsWith('/private') && !url.startsWith('/internal'),
+			privileged(
+				PRIV.DOCS_PRIVATE_ACCESS,
+				express.static(resolveDistPath('ysyx.docs'))
+			)
+		).otherwise(
+			// Static file server
 			express.static(resolveDistPath('ysyx.docs'))
 		)
 	))
@@ -103,24 +102,21 @@ express()
 		withSession(),
 		forumPreprocessor,
 		// Forward processed traffic to real NodeBB service
-		proxy(() => ({
-			hostname: '127.0.0.1',
-			port: config?.port?.NodeBB || 4567
-		}))
+		proxy(config?.port?.NodeBB || 4567 )
 	))
 	// API server
 	.use(vhost(
-		/^api.ysyx.(org|cc|dev|local)$/i,
-		// Forward processed traffic to real NodeBB service
-		proxy(() => ({
-			hostname: '127.0.0.1',
-			port: config?.port?.api || 8999
-		}))
+		/^upload.ysyx.(org|cc|dev|local)$/i,
+		proxy(new Resolved('@upload', false).resolver)
 	))
 	// Uncaught request handler
 	.use((req, res) => {
-		logger.errAcc(`Unable to handle request ${req.headers.host}${req.url} from ${req.origin}`)
-		res.status(statusCode.ClientError.NotFound).end()
+		// Only update statusCode if it has not been modified
+		if (res.statusCode === statusCode.Success.OK) {
+			logger.errAcc(`Unable to handle request ${req.headers.host}${req.url} from ${req.origin}`)
+			res.status(statusCode.ClientError.NotFound)
+		}
+		res.end()
 	})
 	// Request error handler
 	.use(errorHandler)

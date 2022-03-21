@@ -1,4 +1,3 @@
-// import commands from '../daemon/commands.js'
 /**
  * @typedef {Object} Arguments
  * Action of current run.
@@ -20,7 +19,10 @@
  * Controls whether logger will transport to file located in var/log
  * @property {Boolean} [useDevProxy=false]
  * Controls whether front-end dev proxies are honored
+ * @property {Number} [stackTraceLimit=undefined]
+ * Sets the trace limit of error stack
  */
+
 /**
  * @type {Arguments}
  */
@@ -33,6 +35,7 @@ const args = {
 		logToFile: undefined,
 		logToConsole: undefined,
 		useDevProxy: undefined,
+		stackTraceLimit: undefined,
 	},
 	flags = {
 		help() {
@@ -59,13 +62,7 @@ const args = {
 				throw new TypeError(`Bad port number: ${port}`)
 		},
 		logLevel(logLevel) {
-			if (
-				['verbose', 'debug', 'access', 'errAcc', 'info', 'warn', 'error']
-					.indexOf(logLevel) >= 0
-			)
-				return { logLevel }
-			else
-				throw new TypeError(`Unknown logLevel: ${logLevel}`)
+			return { logLevel }
 		},
 		logToFile(arg = true) {
 			arg = JSON.parse(arg)
@@ -75,12 +72,18 @@ const args = {
 			arg = JSON.parse(arg)
 			return { logToConsole: arg }
 		},
+		stackTraceLimit(arg) {
+			arg = parseInt(arg) || undefined
+			if (arg)
+				Error.stackTraceLimit = arg
+			return { stackTraceLimit: arg }
+		}
 	},
 	toggles = {
 		h: () => flags.help(),
 		l: () => flags.logToConsole(),
 		L: () => flags.logToFile(),
-		d: () => [flags.mode('DEVELOPMENT'), flags.useDevProxy()],
+		d: () => [flags.mode('DEVELOPMENT'), flags.useDevProxy(), flags.logLevel('debug')],
 		v: () => flags.logLevel('verbose'),
 		D: () => [flags.mode('DEVELOPMENT'), flags.logLevel('debug')],
 		p: () => [flags.useDevProxy()],
@@ -97,24 +100,31 @@ const args = {
 		 * Start the server, exits if there is already a server running
 		 */
 		start() {
+			flags.logToConsole()
 			return 'Start the server, exits if there is already a server running'
 		},
 		/**
 		 * Restart the server, kills all existing servers
 		 */
 		restart() {
+			flags.logToConsole()
 			return 'Restart the server, kills all existing servers'
 		},
 		/**
 		 * Stop any running server process
 		 */
 		stop() {
+			flags.logToConsole()
 			return 'Stop any running server process'
 		},
 		/**
 		 * Launch in development mode
 		 */
 		dev() {
+			flags.logToConsole()
+			flags.mode('DEVELOPMENT')
+			flags.logLevel('debug')
+			flags.useDevProxy()
 			return 'Launch in development mode'
 		},
 		// Utility
@@ -122,6 +132,7 @@ const args = {
 		 * Install commands and check the existence of config.js[on]
 		 */
 		install() {
+			flags.logToConsole()
 			return 'Install commands and check the existence of config.js[on]'
 		},
 		/**
