@@ -10,6 +10,8 @@ import wrap from '../../utils/wrapAsync.js'
 import withSession from '../../lib/middleware/withSession.js'
 import Resolved from '../../utils/resolved.js'
 import conditional from '../../lib/middleware/conditional.js'
+import getRawBody from 'raw-body'
+import { v4 as uuid } from 'uuid'
 // temp storage path
 const uploadDir = `${PROJECT_ROOT}/var/upload`
 // const storagePath = `${PROJECT_ROOT}/storage`
@@ -20,18 +22,18 @@ const server = express().use(conditional(({ method }) => method === 'PUT',
 		const { session } = req, user = await session.user
 		logger.access(`${req.method} ${req.headers.host}${req.url} from ${req.origin}`)
 		fs.ensureDirSync(uploadDir)
-		wrap(new formidable.IncomingForm({ uploadDir }).parse(req, async (err, fields, files) => {
-			if (err) {
-				logger.warn('save file error:', err.stack)
-				res.status(500).end('save file error')
-			} else {
-				if (!files.fileUpload) {
-					return res.sendStatus(statusCode.ClientError.BadRequest)
-				}
-				await appData.store({ user, action: req.url, fileID: files.fileUpload.newFilename }, {  createTime: new Date().getTime(), origin: req.origin, size: files.fileUpload.size, acquired: false, type: files.fileUpload.mimetype })
-				res.end(files.fileUpload.newFilename)
-			}
-		}))
+		getRawBody(req, {
+			length: req.headers['content-length'],
+		}).then(async buffer => {
+			let fileID = uuid()
+			fs.createWriteStream(`${uploadDir}/${fileID}`).write(buffer)
+			await appData.store({ user: JSON.stringify(user), action: '/avatar', fileID }, { acquired:false, cTime: new Date(), mTime: new Date(), aTime: new Date(), type: req.headers['content-type'], size: buffer.length })
+			logger.access(`receive file ${fileID} from ${req.origin}`)
+			res.status(statusCode.Success.OK).end(fileID)
+		}).catch(e => {
+			logger.errAcc(`save file from <${req.origin}> error :${e.stack}`)
+			res.status(statusCode.ServerError.InternalServerError).end()
+		})
 	}).otherwise((req, res, next) => {
 		logger.errAcc(`Session not found (requesting ${req.headers.host}${req.url} from ${req.origin})`)
 		res.status(statusCode.ClientError.Unauthorized).end()
