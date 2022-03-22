@@ -4,13 +4,18 @@ import logger from './lib/logger.js'
 import { setLock, getLock } from './daemon/pidLock.js'
 import Process from './daemon/Process.js'
 import createWatcher from './daemon/Watcher.js'
-export const $M = (path) => `modules/${path}`
 export async function startServer() {
 	await setLock(process.pid)
-	new Process('router', { port: Args.port || config.port, cluster: 10 })
-	new Process($M('mailer'))
-	new Process($M('upload'))
-	new Process($M('api'))
+	const manifest = (await import('./manifest.js')).default
+	for (const [path, params] of Object.entries(manifest)) {
+		logger.info(`Launching ${path} with ${
+			Object
+				.entries(params)
+				.map(([x, y]) => `${x}=${y}`)
+				.join(' ')
+		}`)
+		new Process(path, params)
+	}
 }
 /**
  * @typedef 

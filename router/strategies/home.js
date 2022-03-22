@@ -21,16 +21,16 @@ const server = express()
 	.use(withSession())
 	.post('/login',
 		wrap(async (req, res, next) => {
-			let payload = req.body
+			const payload = req.body
 			if (!payload || typeof payload !== 'object') {
 				logger.errAcc(`Input: ${payload} is not an object`)
 				return res.status(statusCode.ClientError.BadRequest).end()
 			}
-			let {
+			const {
 				login,
 				password,
 			} = payload
-			let user = await User.locate(login)
+			const user = await User.locate(login)
 			if (!(user instanceof User)) {
 				logger.errAcc(`Unable to locate user with login <${login}>`)
 			}

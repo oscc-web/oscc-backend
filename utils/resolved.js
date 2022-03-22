@@ -1,7 +1,7 @@
 import CustomObject from './customObject.js'
 import logger from '../lib/logger.js'
 import wrap, { setFunctionName } from './wrapAsync.js'
-import { PID, Args } from '../lib/env.js'
+import { PID, Args, _ } from '../lib/env.js'
 import cluster from 'cluster'
 import { createServer } from 'http'
 import initIPC from './ipcInit.js'
@@ -96,19 +96,30 @@ export default class Resolved extends CustomObject {
 		if (service === this.#serviceName) {
 			if (!port || (typeof port !== 'number'))
 				return logger.warn(
-					`Unexpected type port=<${typeof port}>${port} during resolution of ${this}, ignoring this message`
+					`Unexpected port number <${
+						typeof port
+					}> ${
+						port
+					} during resolution of ${
+						this
+					}, ignoring this message ${
+						JSON.stringify(ipcMsg)
+					}`
 				)
 			if (!this.resolved)
 				this.#resolve(true)
+			// Record current instance descriptor
+			const current = this.toString()
 			// Create new descriptor
 			const dsc = { port, ...args }
 			// Update current resolved service descriptor
 			Object.assign(this.#dsc, dsc)
 			// Log the update
-			const current = this.toString()
-			new Promise(r => r()).then(() =>
-				logger.info(`${current} => ${this}`)
-			)
+			setImmediate(() => {
+				const next = this.toString()
+				if (next !== current)
+					logger.info([current, next].join(' => '))
+			})
 		}
 	}
 	/**
@@ -207,11 +218,11 @@ export default class Resolved extends CustomObject {
 			const port = announcement.port = server.address().port
 			// Log the launched server
 			logger.info(`Standalone service up and running at port ${port}`)
-			// Return the port number
+			// Announce the service
+			this.ipcCall(announcement)
 		}
 		if (!cluster.isWorker) {
 			// Announce service
-			this.ipcCall(announcement)
 			// Listen for later initialized service query
 			process.on('message', ({ $, $query, service }) => {
 				if ($ === this.name && $query && name === service)
@@ -235,11 +246,12 @@ export default class Resolved extends CustomObject {
 		}
 	}
 	// Object naming rules
+	#tagCache
 	get [Symbol.toStringTag]() {
 		if (!this.resolved) {
-			return `${this.#serviceName} | PENDING - ${this.#blocking ? '' : 'Non-'}Blocking`
+			return this.#tagCache = `${this.#serviceName} PENDING, ${this.#blocking ? '' : 'Non-'}Blocking`
 		} else {
-			return `${this.#serviceName} => ${this.url}`
+			return this.#tagCache = `${this.#serviceName} ${this.url}`
 		}
 	}
 }

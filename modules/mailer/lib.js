@@ -1,11 +1,9 @@
 import http from 'http'
-import { config, extractIdentityFromURL } from '../../lib/env.js'
+import { extractIdentityFromURL } from '../../lib/env.js'
 import statusCode from '../../lib/status.code.js'
 import Resolved from '../../utils/resolved.js'
-// Get PID of target service
-const servicePID = extractIdentityFromURL(import.meta.url.replace('lib.js', ''))
 // Create a pending service resolution
-const resolver = new Resolved(servicePID, false).resolver
+const resolver = new Resolved(extractIdentityFromURL(import.meta.url), false).resolver
 /**
  * @typedef {('validateMail' | 'XXX')} mailTemplate
  */

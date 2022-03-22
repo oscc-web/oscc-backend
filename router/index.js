@@ -16,8 +16,6 @@ import Session from '../lib/session.js'
 import { PRIV } from '../lib/privileges.js'
 import statusCode from '../lib/status.code.js'
 import Resolved from '../utils/resolved.js'
-// Standard error handler
-
 // Extract related configs from user config
 const port = Args.port || config.port || 8000
 // Compose the server

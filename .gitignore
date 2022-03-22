@@ -5,6 +5,7 @@ node_modules
 # Configurations
 config.js
 config.json
+# manifest.js
 # Package lock
 package-lock.json
 # Runtime generated data
