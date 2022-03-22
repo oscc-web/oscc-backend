@@ -21,7 +21,7 @@ import withSession from '../lib/middleware/withSession.js'
 // Extract related configs from user config
 const port = Args.port || config?.port?.router || 8000
 // Compose the server
-express()
+const server = express()
 	// Remove express powered-by header
 	.disable('x-powered-by')
 	// Preprocessor and access logger

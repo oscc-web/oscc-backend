@@ -2,6 +2,9 @@ import { config } from '../../lib/env.js'
 import { PRIV } from '../../lib/privileges.js'
 import Session from '../../lib/session.js'
 import jsonwebtoken from 'jsonwebtoken'
+import express from 'express'
+import proxy from '../lib/middleware/proxy.js'
+import withSession from '../../lib/middleware/withSession.js'
 
 export const forumGroupPrivLUT = Object.freeze([
 	[PRIV.FORUM_ADMIN, 'administrators'],
@@ -10,7 +13,7 @@ export const forumGroupPrivLUT = Object.freeze([
 	[PRIV.FORUM_COMMENT_AND_VOTE_POST, 'guests']
 ])
 
-export default async function (req, res, next) {
+export async function forumPreprocessor(req, res, next) {
 	const { session } = req
 	if (session instanceof Session) {
 		const header = {
@@ -35,3 +38,8 @@ export default async function (req, res, next) {
 	}
 	return next()
 }
+
+export default express()
+	.use(withSession(forumPreprocessor))
+	// Forward processed traffic to real NodeBB service
+	.use(proxy(config?.port?.NodeBB || 4567))

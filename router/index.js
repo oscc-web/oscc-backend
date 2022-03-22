@@ -5,17 +5,16 @@ import express from 'express'
 // Middleware
 import vhost from '../lib/middleware/vhost.js'
 import proxy from '../lib/middleware/proxy.js'
-import privileged from '../lib/middleware/privileged.js'
+import withSession from '../lib/middleware/withSession.js'
 import errorHandler from '../utils/errorHandler.js'
 // Strategies
 import home from './strategies/home.js'
-import forumPreprocessor from './strategies/forum.js'
+import docs from './strategies/docs.js'
+import forum from './strategies/forum.js'
 // Libraries
 import Session from '../lib/session.js'
 import { PRIV } from '../lib/privileges.js'
 import statusCode from '../lib/status.code.js'
-import conditional from '../lib/middleware/conditional.js'
-import withSession from '../lib/middleware/withSession.js'
 import Resolved from '../utils/resolved.js'
 // Standard error handler
 
@@ -74,20 +73,9 @@ const server = express()
 		}
 	))
 	// DOCS
-	.use(vhost(
-		/^docs.ysyx.(org|cc|dev|local)$/i,
-		// Privileged access filter
-		conditional(
-			({ url }) => url.startsWith('/private') || url.startsWith('/internal'),
-			privileged(
-				PRIV.DOCS_PRIVATE_ACCESS,
-				express.static(resolveDistPath('ysyx.docs'))
-			)
-		).otherwise(
-			// Static file server
-			express.static(resolveDistPath('ysyx.docs'))
-		)
-	))
+	.use(vhost(/^docs.ysyx.(org|cc|dev|local)$/i, docs))
+	// FORUM
+	.use(vhost(/^forum.ysyx.(org|cc|dev|local)$/i, forum))
 	// SPACE
 	.use(vhost(
 		/^space.ysyx.(org|cc|dev|local)$/i,
@@ -96,15 +84,7 @@ const server = express()
 		// Static file server
 		express.static(resolveDistPath('ysyx.space'))
 	))
-	// FORUM
-	.use(vhost(
-		/^forum.ysyx.(org|cc|dev|local)$/i,
-		withSession(),
-		forumPreprocessor,
-		// Forward processed traffic to real NodeBB service
-		proxy(config?.port?.NodeBB || 4567 )
-	))
-	// API server
+	// UPLOAD
 	.use(vhost(
 		/^upload.ysyx.(org|cc|dev|local)$/i,
 		proxy(new Resolved('@upload', false).resolver)
