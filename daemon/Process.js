@@ -2,7 +2,7 @@ import { config, IS_DEVELOPMENT_MODE, PROJECT_ROOT, Args } from '../lib/env.js'
 import { spawn } from 'child_process'
 import { resolve } from 'path'
 import logger from '../lib/logger.js'
-import initIPC from '../utils/ipcInit.js'
+import forwardIPC from '../utils/ipc.js'
 import CustomObject from '../utils/customObject.js'
 export default class Process extends CustomObject {
 	// Path to this process's entry point
@@ -63,7 +63,7 @@ export default class Process extends CustomObject {
 			// eslint-disable-next-line spellcheck/spell-checker
 			proc.unref()
 		} else {
-			initIPC.bind(proc)(this.path, Process)
+			forwardIPC(proc, this.path, Process)
 				.on('spawn', () => logger.info(`Process ${this.#path} launched`))
 				.on('exit', this.onExit(env))
 			// eslint-disable-next-line spellcheck/spell-checker
