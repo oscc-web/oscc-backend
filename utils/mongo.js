@@ -187,14 +187,7 @@ let connection = await connect(config.mongo, onConnectionError)
  * @property {MongoCollection} 
 
  * @param  {...String} collectionDescriptor -like 'example/CR/U/D'
- * @returns {{
- *   user: MongoCollection,
- *   test: MongoCollection,
- *   userTmp: MongoCollection,
- *   session: MongoCollection,
- *   operations: MongoCollection,
- *   progressReport: MongoCollection
- * }}
+ * @returns {Object.<string, MongoCollection>}
  * @description return value can be used like: value.collectionName.find() similar to db.collectionName.find()
  */
 export default function dbInit(...collectionDescriptor) {

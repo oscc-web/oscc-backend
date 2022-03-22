@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs-extra'
+import { readFileSync } from 'fs'
 import express from 'express'
 import cors from 'cors'
 import bodyParser from 'body-parser'
@@ -6,13 +6,16 @@ import logger from '../../lib/logger.js'
 import errorHandler from '../../utils/errorHandler.js'
 import Resolved from '../../utils/resolved.js'
 import statusCode from '../../lib/status.code.js'
-const institutions = Object.freeze(
-	JSON.parse(readFileSync('./institutions.json'))
-)
+import { basename, dirname, resolve } from 'path'
+const path = import.meta.url.replace(/^\w+:\/\//, ''),
+	institutions = Object.freeze(
+		JSON.parse(readFileSync(
+			resolve(dirname(path), basename(path, '.js') + '.json')
+		))
+	)
 logger.info('Starting service')
 
 const server = express()
-	.use()
 	.post('*', cors(), bodyParser.text({ type: req => req.method === 'POST' }),
 		(req, res) => {
 			res

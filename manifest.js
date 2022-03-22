@@ -10,6 +10,7 @@ global.getResolver = ({ url }) => {
 		throw new Error(`Unable to resolve item ${path}`)
 	}, {
 		async $(path, manifest = 'manifest.js') {
+			console.log(resolve(DIR, path, manifest))
 			return (await import(resolve(DIR, path, manifest))).default
 		}
 	})

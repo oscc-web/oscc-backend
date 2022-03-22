@@ -1,7 +1,7 @@
 import logger from '../lib/logger.js'
 import wrap, { setFunctionName } from './wrapAsync.js'
 import { PID, Args, _, TODO } from '../lib/env.js'
-import cluster from 'cluster'
+import cluster, { Worker } from 'cluster'
 import forwardIPC, { MessageHub } from './ipc.js'
 export default class Resolved extends MessageHub {
 	/**
@@ -174,37 +174,41 @@ export default class Resolved extends MessageHub {
 		}
 		if (cluster.isPrimary && Args.cluster) {
 			let lastUnexpectedExit = performance.now()
-			const workers = [], createClusterWorker = (CLUSTER_ID) => {
-				const worker = forwardIPC(
-					cluster.fork({ CLUSTER_ID }),
-					PID,
-					// Cluster should never send a message to its siblings
-					() => []
-				).on('listening', ({ port }) => {
-					if (announcement.port instanceof Promise) {
-						resolvePort(port)
-					}
-				}).on('exit', (code, signal) => {
-					logger[code ? 'warn' : 'info'](
-						`ClusterWorker exited with code ${code}, signal ${signal}`
-					)
-					// Remove this dead worker
-					delete workers[CLUSTER_ID]
-					if (code) {
-						// Try to resume
-						if (performance.now() - lastUnexpectedExit < 60_000) {
-							// Set restart timer for this worker
-							setTimeout(() => {
-								createClusterWorker(CLUSTER_ID)
-							}, 60_000)
-						} else {
-							createClusterWorker(CLUSTER_ID)
+			/**
+			 * @type {Worker[]}
+			 */
+			const workers = [],
+				createClusterWorker = (CLUSTER_ID) => {
+					const worker = forwardIPC(
+						cluster.fork({ CLUSTER_ID }),
+						PID,
+						// Cluster should never send a message to its siblings
+						() => []
+					).on('listening', ({ port }) => {
+						if (announcement.port instanceof Promise) {
+							resolvePort(port)
 						}
-					}
-					if (workers.filter(w => !!w).length === 0) process.exit(code)
-				})
-				return workers[CLUSTER_ID] = worker
-			}
+					}).on('exit', (code, signal) => {
+						logger[code ? 'warn' : 'info'](
+							`ClusterWorker[${CLUSTER_ID}] exited with code ${code}, signal ${signal}`
+						)
+						// Remove this dead worker
+						delete workers[CLUSTER_ID]
+						if (code) {
+						// Try to resume
+							if (performance.now() - lastUnexpectedExit < 60_000) {
+							// Set restart timer for this worker
+								setTimeout(() => {
+									createClusterWorker(CLUSTER_ID)
+								}, 60_000)
+							} else {
+								createClusterWorker(CLUSTER_ID)
+							}
+						}
+						if (workers.filter(w => w).length === 0) process.exit(code)
+					})
+					return workers[CLUSTER_ID] = worker
+				}
 			for (const CLUSTER_ID of [...Array(Args.cluster).keys()]) {
 				workers[CLUSTER_ID] = createClusterWorker(CLUSTER_ID)
 			}
@@ -221,9 +225,10 @@ export default class Resolved extends MessageHub {
 					}))
 					process.exit(1)
 				} else {
-					workers.forEach(wrap(worker => {
+					logger.info('Received SIGINT, shutting down cluster')
+					workers.forEach(worker => {
 						if (worker) worker.kill('SIGINT')
-					}))
+					})
 				}
 				SIGINT = true
 			})
@@ -238,10 +243,8 @@ export default class Resolved extends MessageHub {
 					: `Standalone service up and running at port ${port}`
 				)
 			})
-			process.on('SIGINT', async () => {
-				logger.info(`Service (${process.pid}) stopping`)
+			process.on('SIGINT', () => {
 				server.close(() => {
-					logger.info(`Service (${process.pid}) stopped`)
 					process.exit(0)
 				})
 			})

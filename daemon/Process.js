@@ -89,7 +89,7 @@ export default class Process extends CustomObject {
 				if (lastUnexpectedExit && lastUnexpectedExit + coolDown > Date.now()){
 					logger.error(`Process ${this.#path} frequently exits, terminating this process.`)
 					// Remove process from list and never try to recover
-					Process.remove(this)
+					Process.remove(this, 1)
 				} else {
 					logger.warn(`Trying to restart process ${this.#path}`)
 					this.#lastUnexpectedExit = Date.now()
@@ -97,6 +97,8 @@ export default class Process extends CustomObject {
 				}
 			} else {
 				logger.info(`Process ${this.#path} exited on ${signal} (${code})`)
+				// Remove process from list and never try to recover
+				Process.remove(this)
 			}
 		}
 	}
@@ -142,7 +144,11 @@ export default class Process extends CustomObject {
 	static #list = []
 	static get list() { return this.#list }
 	static push(process) { this.#list.push(process) }
-	static remove(process) {this.#list = this.#list.filter(p => p !== process)}
+	static remove(process, code = 0) {
+		let i
+		while ((i = this.list.indexOf(process)) >= 0) this.list.splice(i, 1)
+		if (!this.list.length) process.exit(code)
+	}
 	/**
 	 * Boolean flag indicating if SIG_INT has been received.
 	 */

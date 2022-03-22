@@ -36,6 +36,9 @@ export default function forwardIPC(proc, identifier, siblings) {
 		if ($ttl === 1 && !$force)
 			return _logger_.debug(`IPC Call from ${identifier} terminated at end of ttl`)
 		// Forward to child processes
+		/**
+		 * @type {[String, process][]}
+		 */
 		const iterator = siblings && siblings[Symbol.iterator] || siblings()
 		if (iterator)
 			for (const [processID, process] of iterator) {
@@ -47,7 +50,11 @@ export default function forwardIPC(proc, identifier, siblings) {
 				// Forward the message
 				try {
 					_logger_.verbose(`Forwarding IPC Call ${identifier} => ${processID}`)
-					process.send({ $, $force, $ttl: $ttl && $ttl - 1, ...args })
+					process.send(
+						{ $, $force, $ttl: $ttl && $ttl - 1, ...args },
+						undefined, undefined,
+						e => { if (e) console.error(e?.stack) }
+					)
 				} catch (e) {
 					_logger_.error(`Error forwarding IPC message to child process <${process.path}>: ${e.stack}`)
 				}
@@ -57,7 +64,11 @@ export default function forwardIPC(proc, identifier, siblings) {
 			// Try forward the message to the upstream
 			try {
 				// $target should be preserved when forwarding to upstream
-				process.send({ $, $force, $ttl: $ttl && $ttl - 1, $target, ...args })
+				process.send(
+					{ $, $force, $ttl: $ttl && $ttl - 1, $target, ...args },
+					undefined, undefined,
+					e => { if (e) console.error(e?.stack) }
+				)
 			} catch (e) {
 				_logger_.error(`Error forwarding IPC message to upstream process: ${e.stack}`)
 			}
@@ -100,8 +111,8 @@ export class MessageHub extends CustomObject {
 			try {
 				process.send(
 					{ ...message, $target, $ttl, $force, $: this.name },
-					undefined,
-					{ swallowErrors: true }
+					undefined, undefined,
+					e => { if (e) console.error(e?.stack) }
 				)
 			} catch (e) {
 				_logger_.error(e.stack)
