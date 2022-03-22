@@ -1,9 +1,9 @@
-import { resolveDistPath } from '../lib/env.js'
 import express from 'express'
-import vhost from '../../lib/middleware/vhost.js'
-import privileged from '../../lib/middleware/privileged.js'
-import conditional from '../../lib/middleware/conditional.js'
+import { resolveDistPath } from '../../lib/env.js'
 import { PRIV } from '../../lib/privileges.js'
+import vhost from '../../lib/middleware/vhost.js'
+import conditional from '../../lib/middleware/conditional.js'
+import privileged from '../../lib/middleware/privileged.js'
 import statusCode from '../../lib/status.code.js'
 
 const staticFileServer = express.static(resolveDistPath('ysyx.docs'))

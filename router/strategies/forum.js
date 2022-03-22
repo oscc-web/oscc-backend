@@ -1,10 +1,10 @@
+import express from 'express'
+import jsonwebtoken from 'jsonwebtoken'
 import { config } from '../../lib/env.js'
 import { PRIV } from '../../lib/privileges.js'
 import Session from '../../lib/session.js'
-import jsonwebtoken from 'jsonwebtoken'
-import express from 'express'
-import proxy from '../lib/middleware/proxy.js'
 import withSession from '../../lib/middleware/withSession.js'
+import proxy from '../../lib/middleware/proxy.js'
 
 export const forumGroupPrivLUT = Object.freeze([
 	[PRIV.FORUM_ADMIN, 'administrators'],
