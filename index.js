@@ -7,9 +7,9 @@ import createWatcher from './daemon/Watcher.js'
 export async function startServer() {
 	await setLock(process.pid)
 	const manifest = (await import('./manifest.js')).default
-	console.log(manifest)
+	logger.debug(`Manifest loaded: ${JSON.stringify(manifest)}`)
 	for (const [path, params] of Object.entries(manifest)) {
-		logger.info(`Launching ${path} with ${
+		logger.debug(`Launching ${path} with ${
 			Object
 				.entries(params)
 				.map(([x, y]) => `${x}=${y}`)

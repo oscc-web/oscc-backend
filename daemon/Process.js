@@ -29,11 +29,11 @@ export default class Process extends CustomObject {
 	 */
 	constructor(path, _args = {}) {
 		super()
-		const { detached, env, ...args } = _args
+		const { detached, PID, env, ...args } = _args
 		this.#path = path
 		this.#args = Object.assign({ ...Args, port: undefined, __COMMAND__: 'run' }, args)
 		Process.push(this)
-		this.#launch(env, detached)
+		this.#launch({ PID, ...env }, detached)
 	}
 	/**
 	 * Timestamp indicating when last unexpected exit happens
@@ -143,10 +143,10 @@ export default class Process extends CustomObject {
 	 */
 	static #list = []
 	static get list() { return this.#list }
-	static push(process) { this.#list.push(process) }
-	static remove(process, code = 0) {
+	static push(proc) { this.#list.push(proc) }
+	static remove(proc, code = 0) {
 		let i
-		while ((i = this.list.indexOf(process)) >= 0) this.list.splice(i, 1)
+		while ((i = this.list.indexOf(proc)) >= 0) this.list.splice(i, 1)
 		if (!this.list.length) process.exit(code)
 	}
 	/**
