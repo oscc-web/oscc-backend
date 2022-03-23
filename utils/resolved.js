@@ -1,12 +1,9 @@
-import CustomObject from './customObject.js'
 import logger from '../lib/logger.js'
 import wrap, { setFunctionName } from './wrapAsync.js'
-import { PID, Args, _ } from '../lib/env.js'
-import cluster from 'cluster'
-import { createServer } from 'http'
-import initIPC from './ipcInit.js'
-
-export default class Resolved extends CustomObject {
+import { PID, Args, _, TODO } from '../lib/env.js'
+import cluster, { Worker } from 'cluster'
+import forwardIPC, { MessageHub } from './ipc.js'
+export default class Resolved extends MessageHub {
 	/**
 	 * @type {String} Name of the service awaiting resolution
 	 */
@@ -20,7 +17,9 @@ export default class Resolved extends CustomObject {
 	 * @type {Boolean} Indicates if this promise has been resolved
 	 */
 	#resolved = false
-	get resolved() { return this.#resolved }
+	get resolved() {
+		return this.#resolved
+	}
 	/**
 	 * @type {Boolean} Indicates if this promise blocks Resolved.all
 	 */
@@ -63,6 +62,13 @@ export default class Resolved extends CustomObject {
 			}
 			return this.#dsc
 		}, `${this}`)
+	}
+	/**
+	 * @type {import('express').Handler}
+	 * Dynamically resolved static file server
+	 */
+	get static() {
+		return TODO('Create dynamically resolved static server')
 	}
 	/**
 	 * Create a new pending promise awaiting the resolution of
@@ -122,20 +128,15 @@ export default class Resolved extends CustomObject {
 			})
 		}
 	}
+	onMessage({ query, ...message }) {
+		if (!query) {
+			this.evaluate(message)
+		}
+	}
 	/**
 	 * @type {Resolved[]} List of all Resolved instances
 	 */
 	static #resolveList = []
-	/**
-	 * Send ipcMsg to all Resolved instance(s) for evaluation
-	 * @param {IpcMsg} ipcMsg 
-	 */
-	static onMessage(ipcMsg) {
-		const { $, service, $query, ...args } = ipcMsg
-		// Check if this message is a resolve broadcast
-		if ($ == this.name && !$query)
-			this.#resolveList.forEach(resolved => resolved.evaluate({ service, ...args }))
-	}
 	/**
 	 * Register a new resolved service into the list
 	 * @param {Resolved} resolved 
@@ -146,7 +147,7 @@ export default class Resolved extends CustomObject {
 		// Query for existing service with a delay of 1 second
 		setTimeout(() => {
 			if (!resolved.resolved)
-				this.ipcCall({ $query: true, service: resolved.serviceName })
+				this.sendMessage({ query: true, service: resolved.serviceName })
 		}, 1000)
 	}
 	/**
@@ -164,96 +165,109 @@ export default class Resolved extends CustomObject {
 	 * @returns {Promise<Number>} port number
 	 */
 	static async launch(server, name = PID) {
-		const announcement = { service: name }
+		let resolvePort
+		const announcement = {
+			service: name,
+			port: new Promise(
+				r => resolvePort = r
+			).then(port => announcement.port = port)
+		}
 		if (cluster.isPrimary && Args.cluster) {
-			const dummyServer = createServer()
-			await new Promise(r => dummyServer.listen(Args.port || 0, r))
 			let lastUnexpectedExit = performance.now()
-			const workers = [], createClusterWorker = (CLUSTER_ID) => {
-				const worker = initIPC.bind(cluster.fork({ CLUSTER_ID }))(
-					PID,
-					() => workers.map(worker => [PID, worker])
-				).on('listening', ({ port }) => {
-					if (announcement.port !== port) {
-						announcement.port = port
-						this.ipcCall(announcement)
-					}
-				}).on('exit', (code, signal) => {
-					logger[['info', 'warn'][!!code]](
-						`ClusterWorker exited with code ${code}, signal ${signal}`
-					)
-					// Remove this dead worker
-					delete workers[CLUSTER_ID]
-					if (code) {
-						// Try to resume
-						if (performance.now() - lastUnexpectedExit < 60_000) {
-							// Set restart timer for this worker
-							setTimeout(() => {
-								createClusterWorker(CLUSTER_ID)
-							}, 60_000)
-						} else {
-							createClusterWorker(CLUSTER_ID)
+			/**
+			 * @type {Worker[]}
+			 */
+			const workers = [],
+				createClusterWorker = (CLUSTER_ID) => {
+					const worker = forwardIPC(
+						cluster.fork({ CLUSTER_ID }),
+						PID,
+						// Cluster should never send a message to its siblings
+						() => []
+					).on('listening', ({ port }) => {
+						if (announcement.port instanceof Promise) {
+							resolvePort(port)
 						}
-					}
-					if (workers.filter(w => !!w).length === 0) process.exit(code)
-				})
-				return workers[CLUSTER_ID] = worker
-			}
+					}).on('exit', (code, signal) => {
+						logger[code ? 'warn' : 'info'](
+							`ClusterWorker[${CLUSTER_ID}] exited with code ${code}, signal ${signal}`
+						)
+						// Remove this dead worker
+						delete workers[CLUSTER_ID]
+						if (code) {
+						// Try to resume
+							if (performance.now() - lastUnexpectedExit < 60_000) {
+							// Set restart timer for this worker
+								setTimeout(() => {
+									createClusterWorker(CLUSTER_ID)
+								}, 60_000)
+							} else {
+								createClusterWorker(CLUSTER_ID)
+							}
+						}
+						if (workers.filter(w => w).length === 0) process.exit(code)
+					})
+					return workers[CLUSTER_ID] = worker
+				}
 			for (const CLUSTER_ID of [...Array(Args.cluster).keys()]) {
 				workers[CLUSTER_ID] = createClusterWorker(CLUSTER_ID)
 			}
-			await new Promise(r => dummyServer.close(r))
 			logger.info(`Cluster initialized with ${Args.cluster} instances`)
 			// Forward upstream IPC message to children
-			process.on('message', message => workers.forEach(wrap(worker => worker.send(message))))
-		} else if (cluster.isWorker) {
-			// Clustered instance for this service
-			server = server.listen(Args.port || 0, () => {
-				const { port } = server.address()
-				logger.info(`ClusterWorker/${process.env.CLUSTER_ID} (${process.pid}) launched on port ${port}`)
+			forwardIPC(process, '__parent_process__', () => workers.map(worker => [PID, worker]))
+			// SIGINT Interceptor
+			let SIGINT
+			process.on('SIGINT', () => {
+				if (SIGINT) {
+					logger.warn('Received SIGINT again, force exiting')
+					workers.forEach(wrap(worker => {
+						if (worker) worker.kill('SIGTERM')
+					}))
+					process.exit(1)
+				} else {
+					logger.info('Received SIGINT, shutting down cluster')
+					workers.forEach(worker => {
+						if (worker) worker.kill('SIGINT')
+					})
+				}
+				SIGINT = true
 			})
 		} else {
-			// Standalone instance for this service
-			await new Promise(res => server = server.listen(Args.port || 0, res))
-			const port = announcement.port = server.address().port
-			// Log the launched server
-			logger.info(`Standalone service up and running at port ${port}`)
-			// Announce the service
-			this.ipcCall(announcement)
+			// Launch server for this service
+			server = server.listen(Args.port || 0, () => {
+				const port = server.address().port
+				resolvePort(port)
+				// Log the launched server
+				logger.info(cluster.isWorker
+					? `Clustered Service up and running at port ${port}`
+					: `Standalone service up and running at port ${port}`
+				)
+			})
+			process.on('SIGINT', () => {
+				server.close(() => {
+					process.exit(0)
+				})
+			})
 		}
 		if (!cluster.isWorker) {
-			// Announce service
+			await announcement.port
+			// Announce the service
+			this.sendMessage(announcement)
 			// Listen for later initialized service query
-			process.on('message', ({ $, $query, service }) => {
-				if ($ === this.name && $query && name === service)
-					this.ipcCall(announcement)
+			this.addMessageHubListener(({ query, service }) => {
+				if (query && name === service)
+					this.sendMessage(announcement)
 			})
 		}
+		// Wait until a port number is added to announcement
 		return announcement.port
 	}
-	/**
-	 * Send an ipc call with '$' assigned with self class name
-	 * @param {Object} args 
-	 */
-	static ipcCall(args) {
-		try {
-			process.send({
-				...args,
-				$: this.name
-			})
-		} catch (e) {
-			logger.error(`Error registering a resolved service: ${e.stack}`)
-		}
-	}
 	// Object naming rules
-	#tagCache
 	get [Symbol.toStringTag]() {
 		if (!this.resolved) {
-			return this.#tagCache = `${this.#serviceName} PENDING, ${this.#blocking ? '' : 'Non-'}Blocking`
+			return `${this.#serviceName} PENDING, ${this.#blocking ? '' : 'Non-'}Blocking`
 		} else {
-			return this.#tagCache = `${this.#serviceName} ${this.url}`
+			return `${this.#serviceName} ${this.url}`
 		}
 	}
 }
-// Setup message listener
-process.on('message', wrap(Resolved.onMessage.bind(Resolved)))

@@ -2,6 +2,5 @@
 const res = getResolver(import.meta)
 // Process
 export default {
-	// [pwd('user')]: { cluster: 2 },
-	...res.$('utilities')
+	...await res.$('utilities')
 }

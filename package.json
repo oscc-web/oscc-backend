@@ -24,7 +24,8 @@
     "uuid": "^8.3.2",
     "vhost": "^3.0.2",
     "winston": "^3.6.0",
-    "winston-mongodb": "^5.0.7"
+    "winston-mongodb": "^5.0.7",
+    "winston-transport": "^4.5.0"
   },
   "name": "ysyx-backend-services",
   "description": "YSYX backend services",

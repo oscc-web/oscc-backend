@@ -23,6 +23,8 @@
  * Sets the trace limit of error stack
  */
 
+import { exec } from 'child_process'
+
 /**
  * @type {Arguments}
  */
@@ -84,16 +86,25 @@ const args = {
 			if (arg)
 				Error.stackTraceLimit = arg
 			return { stackTraceLimit: arg }
+		},
+		async kill(arg = 'ysyx\\.(local|org|dev|cc)') {
+			const cmd = `kill $(ps aux | egrep -i "${arg.toUpperCase()}" | grep -v egrep | awk "{print $2}")`
+			console.log(cmd)
+			exec(cmd)
+			// for (const i of [...Array(3).keys()].reverse())
+			await new Promise(r => { /* console.log(i + 1); */ setTimeout(r, 1000) })
+			return {}
 		}
 	},
 	toggles = {
-		h: () => flags.help(),
-		l: () => flags.logToConsole(),
-		L: () => flags.logToFile(),
+		h: flags.help,
+		l: flags.logToConsole,
+		L: flags.logToFile,
 		d: () => [flags.mode('DEVELOPMENT'), flags.logLevel('debug')],
 		v: () => flags.logLevel('verbose'),
 		D: () => [flags.mode('DEVELOPMENT'), flags.useDevProxy(), flags.logLevel('debug')],
-		p: () => [flags.useDevProxy()],
+		p: flags.useDevProxy,
+		k: flags.kill
 	},
 	commands = {
 		// Server control
@@ -162,11 +173,11 @@ const args = {
 /**
  * @returns {Arguments}
  */
-export default function composeArgs() {
+export default async function composeArgs() {
 	try {
 		return Object.freeze(Object.assign(
 			args,
-			makeArgv()
+			await makeArgv()
 		))
 	} catch (e) {
 		console.error(`${e.name}: ${e.message}`)
@@ -174,7 +185,7 @@ export default function composeArgs() {
 	}
 }
 
-function makeArgv() {
+async function makeArgv() {
 	const argv = process.argv
 		.slice(2)
 		.join(' ')
@@ -182,7 +193,7 @@ function makeArgv() {
 		.replace(/\s(?!-)/gi, '=')
 		.split(' ')
 		.filter(str => !!str)
-	return Object.assign({}, ...argv.map(arg => {
+	return Object.assign({}, ...(await allFlatten(argv.map(arg => {
 		if (/^--/.test(arg)) {
 			// Treat argument as flag
 			let [flag, value] = arg.replace(/^--/gi, '').split('=', 2)
@@ -191,27 +202,35 @@ function makeArgv() {
 				return flags[flag](value)
 			else {
 				// Unrecognized flag
-				throw new TypeError(`Unrecognized flag: ${arg}`)
+				throw new TypeError(`Unrecognized flag: --${arg}`)
 			}
 		} else if (/^-/.test(arg)) {
 			// Treat argument as toggle
 			const args = arg.match(/[a-z]/ig)
-			return args.map(toggle => {
+			return args.map(async toggle => {
 				if (toggle in toggles)
 					return toggles[toggle]()
-				else 
-					// Unrecognized toggle
+				else
+				// Unrecognized toggle
 					throw new TypeError(`Unrecognized toggle: -${toggle}`)
 			})
 		} else {
 			const command = arg.toLocaleLowerCase()
 			if (command in commands)
-				return commands[command](), { __COMMAND__: command }
+				return  commands[command](), { __COMMAND__: command }
 			else
-				// Illegal argument
+			// Illegal argument
 				throw new TypeError(`Illegal argument: ${arg}`)
 		}
-	}).flat(Infinity))
+	}))))
+}
+
+async function allFlatten(arr) {
+	arr = arr.flat(Infinity)
+	if (arr.filter(p => p instanceof Promise).length)
+		return await allFlatten(await Promise.all(arr))
+	else
+		return arr
 }
 
 const HELP_MESSAGE = `
