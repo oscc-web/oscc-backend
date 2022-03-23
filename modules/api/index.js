@@ -12,7 +12,9 @@ logger.info('Staring api server')
 let appDataWithFs = new AppDataWithFs()
 const server = express()
 server.use(
+	// filter method, POST and GET are allowd
 	conditional(({ method }) => method == 'POST' || method == 'GET',
+		// filer user not login
 		withSession().otherwise((req, res, next) => {
 			logger.errAcc(`Session not found (requesting ${req.headers.host}${req.url} from ${req.origin})`)
 			res.status(statusCode.ClientError.Unauthorized).end()
@@ -22,15 +24,19 @@ server.use(
 		res.status(statusCode.ClientError.MethodNotAllowed).end()
 	})
 )
+// acquire file
 server.post('/user/avatar',
 	bodyParser.json(),
 	async (req, res, next) => {
 		logger.access(`${req.method} ${req.headers.host}${req.url} from ${req.origin}`)
 		const { session } = req, user = await session.user
 		appDataWithFs
+			// acquire file 
 			.acquireFile({ user: JSON.stringify(user), action: '/avatar', fileID: req.body.fileID })
 			.then(async result => {
+				// acquire success
 				if (result.modifiedCount > 0) {
+					// update mTime
 					await appDataWithFs.update({ user: JSON.stringify(user), action: '/avatar', fileID: req.body.fileID }, { $set:{ 'content.mTime': new Date() } })
 					logger.access(`Acquire file ${req.body.fileID} by ${user} from ${req.origin}`)
 				} else {
@@ -42,6 +48,7 @@ server.post('/user/avatar',
 				res.sendStatus(statusCode.ServerError.InternalServerError)
 			})
 	})
+	// load file
 	.get('/user/avatar',
 		async (req, res, next) => {
 			logger.access(`${req.method} ${req.headers.host}${req.url} from ${req.origin}`)
@@ -51,7 +58,9 @@ server.post('/user/avatar',
 				.loadFile({ user: JSON.stringify(user), action: '/avatar', fileID })
 				.then(async fileDescriptor => {
 					if (!fileDescriptor) return res.sendStatus(statusCode.ClientError.NotFound)
+					// pipe file to res
 					fileDescriptor.pipe(res)
+					// update aTime
 					await appDataWithFs.update({ user: JSON.stringify(user), action: '/avatar', fileID }, { $set:{ 'content.cTime': new Date() } })
 					logger.access(`send file ${fileID} to <${req.origin}>`)
 				})

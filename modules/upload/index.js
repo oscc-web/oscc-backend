@@ -17,16 +17,27 @@ const uploadDir = `${PROJECT_ROOT}/var/upload`
 // const storagePath = `${PROJECT_ROOT}/storage`
 logger.info('Staring upload server')
 let appData = new AppData('upload')
-const server = express().use(conditional(({ method }) => method === 'PUT',
+const server = express()
+// filter method, PUT is allowd
+server.use(conditional(({ method }) => method === 'PUT',
+	// filer user not login
 	withSession(async (req, res) => {
 		const { session } = req, user = await session.user
 		logger.access(`${req.method} ${req.headers.host}${req.url} from ${req.origin}`)
+		// ensure uploadDir exists
 		fs.ensureDirSync(uploadDir)
+		// get req.body
 		getRawBody(req, {
-			length: req.headers['content-length'],
+			// length: req.headers['content-length'],
+			/**
+     		* The expected length of the stream.
+     		*/
+			length: '500kb'
 		}).then(async buffer => {
 			let fileID = uuid()
+			// write file
 			fs.createWriteStream(`${uploadDir}/${fileID}`).write(buffer)
+			// store upload appData
 			await appData.store({ user: JSON.stringify(user), action: '/avatar', fileID }, { acquired:false, cTime: new Date(), mTime: new Date(), aTime: new Date(), type: req.headers['content-type'], size: buffer.length })
 			logger.access(`receive file ${fileID} from ${req.origin}`)
 			res.status(statusCode.Success.OK).end(fileID)
