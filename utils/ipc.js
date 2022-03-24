@@ -6,7 +6,7 @@ const HUB = new EventEmitter
 let _logger_ = new Promise(res => {
 	process.nextTick(() =>
 		import('../lib/logger.js')
-			.then(({ createCollapsedLog }) => 
+			.then(({ createCollapsedLog }) =>
 				res(_logger_ = createCollapsedLog())
 			)
 	)

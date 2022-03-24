@@ -1,6 +1,3 @@
-import e from 'express'
-import { MaxKey } from 'mongodb'
-
 /**
  * @type {Object.<string, (string) => string>}
  */
@@ -83,7 +80,7 @@ export default class Tree {
 						)
 						const isTitleLine = titleLine == i
 						// console.log({ jMap, i, joint }, i in jMap, jMap[i])
-						if (isTitleLine){
+						if (isTitleLine) {
 							joints.push(lines.length + i)
 						}
 						const [t, s, b] = isTitleLine
