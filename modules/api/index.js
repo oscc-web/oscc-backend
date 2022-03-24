@@ -1,5 +1,5 @@
 import express, { response } from 'express'
-import { config, PROJECT_ROOT } from '../../lib/env.js'
+import { config, PROJECT_ROOT, TODO } from '../../lib/env.js'
 import { AppDataWithFs } from '../../lib/appDataWithFs.js'
 import bodyParser from 'body-parser'
 import statusCode from '../../lib/status.code.js'
@@ -9,7 +9,7 @@ import Resolved from '../../utils/resolved.js'
 import withSession from '../../lib/middleware/withSession.js'
 import conditional from '../../lib/middleware/conditional.js'
 logger.info('Staring api server')
-let appDataWithFs = new AppDataWithFs()
+let appDataWithFs = new AppDataWithFs('user-profile')
 const server = express()
 server.use(
 	// filter method, POST and GET are allowd
@@ -24,49 +24,27 @@ server.use(
 		res.status(statusCode.ClientError.MethodNotAllowed).end()
 	})
 )
-// acquire file
-server.post('/user/avatar',
-	bodyParser.json(),
+// load file
+server.get('/avatar',
 	async (req, res, next) => {
 		logger.access(`${req.method} ${req.headers.host}${req.url} from ${req.origin}`)
-		const { session } = req, user = await session.user
+		const { session } = req, user = await session.user,
+			ownerID = req.query?.userID
+			// check if user has the privilege to get avatar
+			// if (!user.hasPriv(TODO('access to avatar'))){
+			// 	return 
+			// }
 		appDataWithFs
-			// acquire file 
-			.acquireFile({ user: JSON.stringify(user), action: '/avatar', fileID: req.body.fileID })
-			.then(async result => {
-				// acquire success
-				if (result.modifiedCount > 0) {
-					// update mTime
-					await appDataWithFs.update({ user: JSON.stringify(user), action: '/avatar', fileID: req.body.fileID }, { $set:{ 'content.mTime': new Date() } })
-					logger.access(`Acquire file ${req.body.fileID} by ${user} from ${req.origin}`)
-				} else {
-					logger.errAcc(`No suitable file can be acquired located by ${user} fileID <${req.body.fileID}>`)
-				}
-				res.status(statusCode.Success.OK).end(JSON.stringify(result))
-			}).catch(e => {
-				logger.errAcc(`File accquired error: ${e.stack}`)
+			.loadFile({ userID: ownerID, url: '/avatar' })
+			.then(async fileDescriptor => {
+				if (!fileDescriptor) return res.sendStatus(statusCode.ClientError.NotFound)
+				// pipe file to res
+				fileDescriptor.pipe(res)
+				logger.access(`send file ${fileDescriptor.fileID} to <${req.origin}>`)
+			})
+			.catch(e => {
+				logger.errAcc(`Can not get ${ownerID}'s avatar: ${e.stack}`)
 				res.sendStatus(statusCode.ServerError.InternalServerError)
 			})
 	})
-	// load file
-	.get('/user/avatar',
-		async (req, res, next) => {
-			logger.access(`${req.method} ${req.headers.host}${req.url} from ${req.origin}`)
-			const { session } = req, user = await session.user,
-				fileID = req.query?.fileID
-			appDataWithFs
-				.loadFile({ user: JSON.stringify(user), action: '/avatar', fileID })
-				.then(async fileDescriptor => {
-					if (!fileDescriptor) return res.sendStatus(statusCode.ClientError.NotFound)
-					// pipe file to res
-					fileDescriptor.pipe(res)
-					// update aTime
-					await appDataWithFs.update({ user: JSON.stringify(user), action: '/avatar', fileID }, { $set:{ 'content.cTime': new Date() } })
-					logger.access(`send file ${fileID} to <${req.origin}>`)
-				})
-				.catch(e => {
-					logger.errAcc(`Can not get ${user}'s file ${fileID}: ${e.stack}`)
-					res.sendStatus(statusCode.ServerError.InternalServerError)
-				})
-		})
 Resolved.launch(server)

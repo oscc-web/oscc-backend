@@ -1,55 +1,69 @@
 // Environmental setup
 import { config, PID, PROJECT_ROOT } from '../../lib/env.js'
 import logger from '../../lib/logger.js'
-import formidable from 'formidable'
-import fs from 'fs-extra'
 import express from 'express'
-import { AppData } from '../../lib/appData.js'
+import { contentDir, AppDataWithFs } from '../../lib/appDataWithFs.js'
 import statusCode from '../../lib/status.code.js'
-import wrap from '../../utils/wrapAsync.js'
 import withSession from '../../lib/middleware/withSession.js'
-import Resolved from '../../utils/resolved.js'
+import privileged from '../../lib/middleware/privileged.js'
 import conditional from '../../lib/middleware/conditional.js'
-import getRawBody from 'raw-body'
-import { v4 as uuid } from 'uuid'
+import Resolved from '../../utils/resolved.js'
+import fileTransport from '../../lib/middleware/fileTransport.js'
+import { upload as manifest } from './manifest.js'
+import { stat } from 'fs'
 // temp storage path
-const uploadDir = `${PROJECT_ROOT}/var/upload`
 // const storagePath = `${PROJECT_ROOT}/storage`
 logger.info('Staring upload server')
-let appData = new AppData('upload')
 const server = express()
 // filter method, PUT is allowd
-server.use(conditional(({ method }) => method === 'PUT',
+server.use(
+	conditional(({ method }) => method === 'PUT',
 	// filer user not login
-	withSession(async (req, res) => {
-		const { session } = req, user = await session.user
-		logger.access(`${req.method} ${req.headers.host}${req.url} from ${req.origin}`)
-		// ensure uploadDir exists
-		fs.ensureDirSync(uploadDir)
-		// get req.body
-		getRawBody(req, {
-			// length: req.headers['content-length'],
-			/**
-     		* The expected length of the stream.
-     		*/
-			length: '500kb'
-		}).then(async buffer => {
-			let fileID = uuid()
-			// write file
-			fs.createWriteStream(`${uploadDir}/${fileID}`).write(buffer)
-			// store upload appData
-			await appData.store({ user: JSON.stringify(user), action: '/avatar', fileID }, { acquired:false, cTime: new Date(), mTime: new Date(), aTime: new Date(), type: req.headers['content-type'], size: buffer.length })
-			logger.access(`receive file ${fileID} from ${req.origin}`)
-			res.status(statusCode.Success.OK).end(fileID)
-		}).catch(e => {
-			logger.errAcc(`save file from <${req.origin}> error :${e.stack}`)
-			res.status(statusCode.ServerError.InternalServerError).end()
+		withSession(
+			// filter user does not have privilege to upload
+			// TODO privileged(
+			// ,
+			// create servers for each path in manifest
+			...Object.entries(await manifest()).map(([path, { hook = (req, res, next) => next(), ...conf }]) => conditional(
+				// send request to correct server according to url
+				({ url }) => url.toLowerCase() == path.toLowerCase(),
+				// store file in fs
+				fileTransport(contentDir, conf),
+				async (req, res, next) => {
+					const { session, url, fileID, filePath, fileSize } = req
+					// store file info into database
+					await AppDataWithFs.registerFileUpload(fileID, session.userID, url, {
+						fileSize,
+						filePath,
+						// ... (req.headers || {}),
+						...{ type:req.headers?.['content-type'] },
+						// fs.stat
+						... await new Promise((resolve, reject) => stat(filePath, (err, stats) => {
+							if (err) reject(err)
+							else resolve(stats)
+						}))
+					},
+					// store args
+					conf),
+					await hook(req, res, () =>
+						res.status(statusCode.Success.OK).end(fileID)
+					)
+				} 
+			)),
+			function uploadErrorHandler(err, req, res, next) {
+				logger.errAcc(err.stack)
+				try {
+					res.status(statusCode.ClientError.PayloadTooLarge).end()
+					// eslint-disable-next-line no-empty
+				} catch (e) {}
+			}
+			// ).otherwise((req, res, next) => {
+			// 	res.status(statusCode.ClientError.Unauthorized).end()
+			// })
+		).otherwise((req, res, next) => {
+			res.status(statusCode.ClientError.Unauthorized).end()
 		})
-	}).otherwise((req, res, next) => {
-		logger.errAcc(`Session not found (requesting ${req.headers.host}${req.url} from ${req.origin})`)
-		res.status(statusCode.ClientError.Unauthorized).end()
-	}))
-	.otherwise((req, res, next) => {
+	).otherwise((req, res, next) => {
 		logger.errAcc(`${req.method} not allowed (requesting ${req.headers.host}${req.url} from ${req.origin})`)
 		res.status(statusCode.ClientError.MethodNotAllowed).end()
 	})
