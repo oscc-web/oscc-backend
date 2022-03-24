@@ -51,22 +51,22 @@ const server = express()
 				return proxy(config.devProxy['@'])
 			})()
 			// Static file server
+			// eslint-disable-next-line spellcheck/spell-checker
 			: express.static(resolveDistPath('ysyx')),
 		// Serve index.html
 		async (req, res, next) => {
 			try {
 				return await new Promise((resolve, reject) => {
 					res.sendFile(
-						'index.html',
+						'./index.html',
 						{ root: resolveDistPath('ysyx') },
 						e => {
-							if (e instanceof Error) return reject(e)
-							resolve()
+							if (e instanceof Error) reject(e)
+							else resolve()
 						})
 				})
 			} catch (e) {
-				logger.error('Cannot find index.html for root PWA')
-				return next()
+				next(e)
 			}
 		}
 	))
