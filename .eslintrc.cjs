@@ -63,8 +63,7 @@ module.exports = {
 					'unprocessable',
 					'jsonwebtoken',
 					'uploader',
-					'formatter',
-					'readdir'
+					'formatter'
 				],
 				'skipIfMatch': [
 					'http://[^s]*',
