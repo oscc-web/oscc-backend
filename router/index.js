@@ -12,12 +12,8 @@ import home from './strategies/home.js'
 import docs from './strategies/docs.js'
 import forum from './strategies/forum.js'
 // Libraries
-import Session from '../lib/session.js'
-import { PRIV } from '../lib/privileges.js'
 import statusCode from '../lib/status.code.js'
 import Resolved from '../utils/resolved.js'
-// Extract related configs from user config
-const port = Args.port || config.port || 8000
 // Compose the server
 const server = express()
 	// Remove express powered-by header
@@ -98,5 +94,5 @@ const server = express()
 	})
 	// Request error handler
 	.use(errorHandler)
-	// Open listening port
+// Launch server
 Resolved.launch(server)
