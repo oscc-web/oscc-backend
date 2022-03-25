@@ -1,10 +1,7 @@
-import express, { response } from 'express'
-import { config, PROJECT_ROOT, TODO } from '../../lib/env.js'
+import express from 'express'
 import { AppDataWithFs } from '../../lib/appDataWithFs.js'
-import bodyParser from 'body-parser'
 import statusCode from '../../lib/status.code.js'
 import logger from '../../lib/logger.js'
-import errorHandler from '../../utils/errorHandler.js'
 import Resolved from '../../utils/resolved.js'
 import withSession from '../../lib/middleware/withSession.js'
 import conditional from '../../lib/middleware/conditional.js'
@@ -27,7 +24,6 @@ server.use(
 // load file
 server.get('/avatar',
 	async (req, res, next) => {
-		logger.access(`${req.method} ${req.headers.host}${req.url} from ${req.origin}`)
 		const { session } = req, user = await session.user,
 			ownerID = req.query?.userID
 			// check if user has the privilege to get avatar
