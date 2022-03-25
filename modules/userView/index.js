@@ -1,21 +1,21 @@
 // Imports
-import { config, Rx, IS_DEVELOPMENT_MODE, Args } from '../lib/env.js'
-import logger from '../lib/logger.js'
+import { config, Rx, IS_DEVELOPMENT_MODE, Args } from '../../lib/env.js'
+import logger from '../../lib/logger.js'
 import express from 'express'
 // Middleware
-import vhost from '../lib/middleware/vhost.js'
-import proxy from '../lib/middleware/proxy.js'
-import privileged from '../lib/middleware/privileged.js'
-import errorHandler from '../utils/errorHandler.js'
+import vhost from '../../lib/middleware/vhost.js'
+import proxy from '../../lib/middleware/proxy.js'
+import privileged from '../../lib/middleware/privileged.js'
+import errorHandler from '../../utils/errorHandler.js'
 // Strategies
 import home from './strategies/home.js'
-import forumPreprocessor from './strategies/forum.js'
+import forumPreprocessor from '../../strategies/forum.js'
 // Libraries
-import Session from '../lib/session.js'
-import { PRIV } from '../lib/privileges.js'
-import statusCode from '../lib/status.code.js'
-import conditional from '../lib/middleware/conditional.js'
-import withSession from '../lib/middleware/withSession.js'
+import Session from '../../lib/session.js'
+import { PRIV } from '../../lib/privileges.js'
+import statusCode from '../../lib/status.code.js'
+import conditional from '../../lib/middleware/conditional.js'
+import withSession from '../../lib/middleware/withSession.js'
 // Standard error handler
 
 // Extract related configs from user config
