@@ -1,42 +1,69 @@
 // Environmental setup
 import { config, PID, PROJECT_ROOT } from '../../lib/env.js'
 import logger from '../../lib/logger.js'
-import formidable from 'formidable'
-import fs from 'fs-extra'
 import express from 'express'
-import { AppData } from '../../lib/appData.js'
+import { contentDir, AppDataWithFs } from '../../lib/appDataWithFs.js'
 import statusCode from '../../lib/status.code.js'
-import wrap from '../../utils/wrapAsync.js'
 import withSession from '../../lib/middleware/withSession.js'
-import Resolved from '../../utils/resolved.js'
+import privileged from '../../lib/middleware/privileged.js'
 import conditional from '../../lib/middleware/conditional.js'
+import Resolved from '../../utils/resolved.js'
+import fileTransport from '../../lib/middleware/fileTransport.js'
+import { upload as manifest } from './manifest.js'
+import { stat } from 'fs'
 // temp storage path
-const uploadDir = `${PROJECT_ROOT}/var/upload`
 // const storagePath = `${PROJECT_ROOT}/storage`
 logger.info('Staring upload server')
-let appData = new AppData('upload')
-const server = express().use(conditional(({ method }) => method === 'PUT',
-	withSession(async (req, res) => {
-		const { session } = req, user = await session.user
-		logger.access(`${req.method} ${req.headers.host}${req.url} from ${req.origin}`)
-		fs.ensureDirSync(uploadDir)
-		wrap(new formidable.IncomingForm({ uploadDir }).parse(req, async (err, fields, files) => {
-			if (err) {
-				logger.warn('save file error:', err.stack)
-				res.status(500).end('save file error')
-			} else {
-				if (!files.fileUpload) {
-					return res.sendStatus(statusCode.ClientError.BadRequest)
-				}
-				await appData.store({ user, action: req.url, fileID: files.fileUpload.newFilename }, {  createTime: new Date().getTime(), origin: req.origin, size: files.fileUpload.size, acquired: false, type: files.fileUpload.mimetype })
-				res.end(files.fileUpload.newFilename)
+const server = express()
+// filter method, PUT is allowd
+server.use(
+	conditional(({ method }) => method === 'PUT',
+	// filer user not login
+		withSession(
+			// filter user does not have privilege to upload
+			// TODO privileged(
+			// ,
+			// create servers for each path in manifest
+			...Object.entries(await manifest()).map(([path, { hook = (req, res, next) => next(), ...conf }]) => conditional(
+				// send request to correct server according to url
+				({ url }) => url.toLowerCase() == path.toLowerCase(),
+				// store file in fs
+				fileTransport(contentDir, conf),
+				async (req, res, next) => {
+					const { session, url, fileID, filePath, fileSize } = req
+					// store file info into database
+					await AppDataWithFs.registerFileUpload(fileID, session.userID, url, {
+						fileSize,
+						filePath,
+						// ... (req.headers || {}),
+						...{ type:req.headers?.['content-type'] },
+						// fs.stat
+						... await new Promise((resolve, reject) => stat(filePath, (err, stats) => {
+							if (err) reject(err)
+							else resolve(stats)
+						}))
+					},
+					// store args
+					conf),
+					await hook(req, res, () =>
+						res.status(statusCode.Success.OK).end(fileID)
+					)
+				} 
+			)),
+			function uploadErrorHandler(err, req, res, next) {
+				logger.errAcc(err.stack)
+				try {
+					res.status(statusCode.ClientError.PayloadTooLarge).end()
+					// eslint-disable-next-line no-empty
+				} catch (e) {}
 			}
-		}))
-	}).otherwise((req, res, next) => {
-		logger.errAcc(`Session not found (requesting ${req.headers.host}${req.url} from ${req.origin})`)
-		res.status(statusCode.ClientError.Unauthorized).end()
-	}))
-	.otherwise((req, res, next) => {
+			// ).otherwise((req, res, next) => {
+			// 	res.status(statusCode.ClientError.Unauthorized).end()
+			// })
+		).otherwise((req, res, next) => {
+			res.status(statusCode.ClientError.Unauthorized).end()
+		})
+	).otherwise((req, res, next) => {
 		logger.errAcc(`${req.method} not allowed (requesting ${req.headers.host}${req.url} from ${req.origin})`)
 		res.status(statusCode.ClientError.MethodNotAllowed).end()
 	})
