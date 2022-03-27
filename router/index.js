@@ -14,6 +14,7 @@ import forum from './strategies/forum.js'
 // Libraries
 import statusCode from '../lib/status.code.js'
 import Resolved from '../utils/resolved.js'
+import { WebsocketResponse } from '../utils/wsResponse.js'
 // Compose the server
 const server = express()
 	// Remove express powered-by header
@@ -36,7 +37,7 @@ const server = express()
 	})
 	// YSYX.ORG
 	.use(vhost(
-		/^ysyx.(org|cc|dev|local)$/i,
+		/^ysyx\.(org|cc|dev|local)$/i,
 		// Routing strategy
 		home,
 		// Static server can be either a static dist or vite dev server
@@ -67,12 +68,12 @@ const server = express()
 		}
 	))
 	// DOCS
-	.use(vhost(/^docs.ysyx.(org|cc|dev|local)$/i, docs))
+	.use(vhost(/^docs\.ysyx\.(org|cc|dev|local)$/i, docs))
 	// FORUM
-	.use(vhost(/^forum.ysyx.(org|cc|dev|local)$/i, forum))
+	.use(vhost(/^forum\.ysyx\.(org|cc|dev|local)$/i, forum))
 	// SPACE
 	.use(vhost(
-		/^space.ysyx.(org|cc|dev|local)$/i,
+		/^space\.ysyx\.(org|cc|dev|local)$/i,
 		// Session preprocessor
 		withSession(),
 		// Static file server
@@ -80,7 +81,7 @@ const server = express()
 	))
 	// UPLOAD
 	.use(vhost(
-		/^upload.ysyx.(org|cc|dev|local)$/i,
+		/^upload\.ysyx\.(org|cc|dev|local)$/i,
 		proxy(new Resolved('@upload', false).resolver)
 	))
 	// Uncaught request handler
@@ -95,4 +96,12 @@ const server = express()
 	// Request error handler
 	.use(errorHandler)
 // Launch server
-Resolved.launch(server)
+Resolved.launch(server).then(httpServer => {
+	if (httpServer) httpServer.on('upgrade', (req, socket, head) => {
+		const { headers: { host, connection, upgrade }, url, method } = req
+		console.log({ host, connection, upgrade, url, method })
+		server.handle(req, new WebsocketResponse(req, socket, head), () => {
+			socket.close('No handler for this request')
+		})
+	})
+})
