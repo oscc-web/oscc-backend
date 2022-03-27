@@ -20,20 +20,20 @@ export async function forumPreprocessor(req, res, next) {
 				'alg': 'HS256',
 				'typ': 'JWT'
 			},
-			userData = {
-				...session.user.info,
-				id: session.userID,
-				groups: []
-			}
-		const user = await session.user
+			user = await session.user,
+			{ name, mail, userID } = user,
+			userData = { userID, name, mail },
+			groups = []
 		forumGroupPrivLUT.forEach(([priv, groupName]) => {
-			if (user.hasPriv(priv)) {
-				userData.groups.push(groupName)
-			}
+			if (user.hasPriv(priv)) groups.push(groupName)
 		})
-		const secret = config?.nodebb?.secret || ''
+		const secret = config?.nodebb?.secret || 'forum.ysyx.secret'
 		req.injectCookies({
-			token: jsonwebtoken.sign(userData, secret, { header })
+			__internal_nodebb__: jsonwebtoken.sign(
+				{ ...userData, groups },
+				secret,
+				{ header }
+			)
 		})
 	}
 	return next()

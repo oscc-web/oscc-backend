@@ -99,7 +99,6 @@ const server = express()
 Resolved.launch(server).then(httpServer => {
 	if (httpServer) httpServer.on('upgrade', (req, socket, head) => {
 		const { headers: { host, connection, upgrade }, url, method } = req
-		console.log({ host, connection, upgrade, url, method })
 		server.handle(req, new WebsocketResponse(req, socket, head), () => {
 			socket.close('No handler for this request')
 		})
