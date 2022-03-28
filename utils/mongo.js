@@ -1,5 +1,5 @@
 import { MongoClient } from 'mongodb'
-import { config } from '../lib/env.js'
+import { config } from 'lib/env.js'
 /**
  * @typedef {Object} mongoConfig 
  * @property {String} password

@@ -1,6 +1,6 @@
-import logger from '../lib/logger.js'
+import logger from 'lib/logger.js'
 import wrap, { setFunctionName } from './wrapAsync.js'
-import { PID, Args, _, TODO } from '../lib/env.js'
+import { PID, Args, _, TODO } from 'lib/env.js'
 import cluster, { Worker } from 'cluster'
 import forwardIPC, { MessageHub } from './ipc.js'
 export default class Resolved extends MessageHub {
@@ -52,7 +52,7 @@ export default class Resolved extends MessageHub {
 	/**
 	 * The resolver will be called within wrapped proxy server,
 	 * therefore there is no need to wrap it again.
-	 * @type {import('../lib/middleware/proxy.js').Resolver}
+	 * @type {import('lib/middleware/proxy.js').Resolver}
 	 */
 	get resolver() {
 		return setFunctionName(async () => {

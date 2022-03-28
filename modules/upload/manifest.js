@@ -1,7 +1,7 @@
 
 export async function upload() {
-	const { AppDataWithFs } = await import('../../lib/appDataWithFs.js')
-	const { PRIV } = await import('../../lib/privileges.js')
+	const { AppDataWithFs } = await import('lib/appDataWithFs.js')
+	const { PRIV } = await import('lib/privileges.js')
 	const userProfile = new AppDataWithFs('user-profile')
 	return {
 		'/avatar': {

@@ -1,9 +1,9 @@
-import { config, IS_DEVELOPMENT_MODE, PROJECT_ROOT, Args } from '../lib/env.js'
+import { config, IS_DEVELOPMENT_MODE, PROJECT_ROOT, Args } from 'lib/env.js'
 import { spawn } from 'child_process'
 import { resolve } from 'path'
-import logger from '../lib/logger.js'
-import forwardIPC from '../utils/ipc.js'
-import CustomObject from '../utils/customObject.js'
+import logger from 'lib/logger.js'
+import forwardIPC from 'utils/ipc.js'
+import CustomObject from 'utils/customObject.js'
 export default class Process extends CustomObject {
 	// Path to this process's entry point
 	#path
@@ -16,7 +16,7 @@ export default class Process extends CustomObject {
 	#proc
 	get proc() { return this.#proc }
 	/**
-	 * @typedef {import('../utils/args.js').Arguments} ProcessAdditionalArguments 
+	 * @typedef {import('utils/args.js').Arguments} ProcessAdditionalArguments 
 	 * @property {Boolean} [detached]
 	 * Indicates whether the process will be detached from current process.
 	 * This is designed to be used along with 'start', 'restart' or 'stop'

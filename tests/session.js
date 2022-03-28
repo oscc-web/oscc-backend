@@ -1,7 +1,7 @@
 import Test from './Test.js'
-import Session from '../lib/session.js'
-import User from '../lib/user.js'
-import DBInit from '../utils/mongo.js'
+import Session from 'lib/session.js'
+import User from 'lib/user.js'
+import DBInit from 'utils/mongo.js'
 import express from 'express'
 // Generate parameters for test
 let userID = Date.now().toString(36),

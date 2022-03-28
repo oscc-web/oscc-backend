@@ -1,10 +1,10 @@
 import express from 'express'
-import { AppDataWithFs } from '../../lib/appDataWithFs.js'
-import statusCode from '../../lib/status.code.js'
-import logger from '../../lib/logger.js'
-import Resolved from '../../utils/resolved.js'
-import withSession from '../../lib/middleware/withSession.js'
-import conditional from '../../lib/middleware/conditional.js'
+import { AppDataWithFs } from 'lib/appDataWithFs.js'
+import statusCode from 'lib/status.code.js'
+import logger from 'lib/logger.js'
+import Resolved from 'utils/resolved.js'
+import withSession from 'lib/middleware/withSession.js'
+import conditional from 'lib/middleware/conditional.js'
 logger.info('Staring api server')
 let appDataWithFs = new AppDataWithFs('user-profile')
 const server = express()

@@ -1,4 +1,4 @@
-import dbInit from '../utils/mongo.js'
+import dbInit from 'utils/mongo.js'
 import Test from './Test.js'
 let db
 let id = Date.now().toString(36)

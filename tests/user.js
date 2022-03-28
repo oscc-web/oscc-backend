@@ -1,6 +1,6 @@
 // Test actions
-import User from '../lib/user.js'
-import { seed } from '../utils/crypto.js'
+import User from 'lib/user.js'
+import { seed } from 'utils/crypto.js'
 import Test from './Test.js'
 // Generate parameters for test purpose
 let userID = seed(12),

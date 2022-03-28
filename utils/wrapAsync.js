@@ -1,4 +1,4 @@
-import logger from '../lib/logger.js'
+import logger from 'lib/logger.js'
 
 function errorHandler(e) {
 	logger.error(`Uncaught error during async execution: ${e?.stack}`)

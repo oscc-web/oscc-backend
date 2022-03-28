@@ -26,7 +26,9 @@
     "vhost": "^3.0.2",
     "winston": "^3.6.0",
     "winston-mongodb": "^5.0.7",
-    "winston-transport": "^4.5.0"
+    "winston-transport": "^4.5.0",
+    "lib": "file:./lib",
+    "utils": "file:./utils"
   },
   "name": "ysyx-backend-services",
   "description": "YSYX backend services",

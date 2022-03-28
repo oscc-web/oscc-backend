@@ -1,5 +1,5 @@
 import { ServerResponse } from 'http'
-import logger from '../lib/logger.js'
+import logger from 'lib/logger.js'
 export class WebsocketResponse extends ServerResponse {
 	get method() { return 'WS' }
 	isWebsocket = true
