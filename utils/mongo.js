@@ -15,7 +15,7 @@ const {
 	host = '127.0.0.1',
 	port = 27017,
 	database,
-	optionss = {}
+	options = {}
 } = config.mongo || {}
 // Check for required fields
 if (!(username && password && database)) {
@@ -31,8 +31,8 @@ export class DatabasePermissionError extends Error {}
 */
 export const connectionString = `mongodb://${username}:${encodeURIComponent(password)}@${host}:${port}/${database}`
 /**
- * Merged optionss with defaults and user optionss
- * @type {import('mongodb').MongoClientOptions} - mongodb connect optionss
+ * Merged options with defaults and user options
+ * @type {import('mongodb').MongoClientOptions} - mongodb connect options
  */
 export const connectionOptions = Object.freeze(Object.assign(
 	{
@@ -41,11 +41,11 @@ export const connectionOptions = Object.freeze(Object.assign(
 		connectTimeoutMS: 30000,
 		useUnifiedTopology: true
 	},
-	optionss
+	options
 ))
 /**
  * get connection to mongodb
- * @param {mongo} optionss - mongodb connect optionss
+ * @param {mongo} options - mongodb connect options
  * @param {(e: Error) => Any} onError
  * @return {Promise<Db>}
  */
@@ -98,7 +98,7 @@ export class MongoCollection {
 	/**
 	 * Insert into collection
 	 * @param {import('mongodb').OptionalId<import('mongodb').Document>} arg 
-	 * @param {import('mongodb').BulkWriteOptions} options -insert optionss
+	 * @param {import('mongodb').BulkWriteOptions} options -insert options
 	 * @returns {Promise<import('mongodb').InsertOneResult> | Promise<import('mongodb').InsertManyResult>}
 	 */
 	async insert(arg, options) {
