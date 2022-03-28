@@ -19,7 +19,7 @@ export async function upload() {
 				let acquireResult
 				// Check contentType is image
 				if (contentType&&contentType.trim().startsWith('image')) {
-					acquireResult = await userProfile.acquireFile({ userID: session.userID, url })
+					acquireResult = await userProfile.acquireFile({ userID: session.userID, url }, { replace:true })
 				}
 				await next()
 			}
