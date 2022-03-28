@@ -160,12 +160,12 @@ export default class Resolved extends MessageHub {
 	}
 	/**
 	 * Send an IPC broadcast to all sibling processes
-	 * @param {import('http').Server} server 
+	 * @param {import('express').Express} server 
 	 * @param {String} name
-	 * @returns {Promise<Number>} port number
+	 * @returns {Promise<import('http').Server>} port number
 	 */
 	static async launch(server, name = PID) {
-		let resolvePort
+		let resolvePort, httpServer
 		const announcement = {
 			service: name,
 			port: new Promise(
@@ -234,8 +234,8 @@ export default class Resolved extends MessageHub {
 			})
 		} else {
 			// Launch server for this service
-			server = server.listen(Args.port || 0, () => {
-				const port = server.address().port
+			httpServer = server.listen(Args.port || 0, () => {
+				const port = httpServer.address().port
 				resolvePort(port)
 				// Log the launched server
 				logger.info(cluster.isWorker
@@ -249,8 +249,8 @@ export default class Resolved extends MessageHub {
 				})
 			})
 		}
+		await announcement.port
 		if (!cluster.isWorker) {
-			await announcement.port
 			// Announce the service
 			this.sendMessage(announcement)
 			// Listen for later initialized service query
@@ -260,7 +260,7 @@ export default class Resolved extends MessageHub {
 			})
 		}
 		// Wait until a port number is added to announcement
-		return announcement.port
+		return httpServer
 	}
 	// Object naming rules
 	get [Symbol.toStringTag]() {

@@ -3,12 +3,14 @@ import CustomObject from './customObject.js'
 import wrap from './wrapAsync.js'
 const HUB = new EventEmitter
 // Delayed creation of logger to resolve circular import
-let _logger_
-process.nextTick(() =>
-	import('../lib/logger.js').then(({
-		createCollapsedLog
-	}) => _logger_ = createCollapsedLog())
-)
+let _logger_ = new Promise(res => {
+	process.nextTick(() =>
+		import('../lib/logger.js')
+			.then(({ createCollapsedLog }) =>
+				res(_logger_ = createCollapsedLog())
+			)
+	)
+})
 // Reduce IPC workload
 let lastCall
 /**
@@ -140,4 +142,55 @@ export class MessageHub extends CustomObject {
 	static prependListener = HUB.prependListener.bind(HUB)
 	static prependOnceListener = HUB.prependOnceListener.bind(HUB)
 	static eventNames = HUB.eventNames.bind(HUB)
+	// Fallback toStringTag
+	get [Symbol.toStringTag]() {
+		return '*'
+	}
+}
+
+import lodash from 'lodash'
+const { merge } = lodash
+import Tree from './tree.js'
+export class ProcessTree extends MessageHub {
+	treeSegment = {}
+	#PID
+	constructor(PID) {
+		super()
+		this.#PID = PID
+		this.sendRelay()
+	}
+	onMessage(treeSegment) {
+		this.treeSegment = merge(this.treeSegment, treeSegment)
+		this.sendRelay(true)
+	}
+	sendRelay(resetTimeout = false) {
+		if (process.send)
+			this.sendMessage({ [this.#PID]: this.treeSegment }, { $ttl: 1 })
+		if (resetTimeout || this.timeout) {
+			try {
+				this.timeout && clearTimeout(this.timeout)
+			// eslint-disable-next-line no-empty
+			} catch (e) {}
+			this.timeout = setTimeout(() => {
+				delete this.timeout
+				this.emit('ready', { [this.#PID]: this.treeSegment })
+			}, 1000)
+		}
+	}
+}
+if (process?.env?.NODE_ENV === 'development') {
+	// Child process logic
+	_logger_.then(async logger => {
+		const { PID } = await import('../lib/env.js')
+		const pt = new ProcessTree(PID)
+		pt.sendRelay()
+		if (!process.send) {
+			pt.on(
+				'ready',
+				data => logger.debug(
+					`Process tree${new Tree(data)}`
+				)
+			)
+		}
+	})
 }

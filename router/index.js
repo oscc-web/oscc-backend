@@ -12,12 +12,9 @@ import home from './strategies/home.js'
 import docs from './strategies/docs.js'
 import forum from './strategies/forum.js'
 // Libraries
-import Session from '../lib/session.js'
-import { PRIV } from '../lib/privileges.js'
 import statusCode from '../lib/status.code.js'
 import Resolved from '../utils/resolved.js'
-// Extract related configs from user config
-const port = Args.port || config.port || 8000
+import { WebsocketResponse } from '../utils/wsResponse.js'
 // Compose the server
 const server = express()
 	// Remove express powered-by header
@@ -40,7 +37,7 @@ const server = express()
 	})
 	// YSYX.ORG
 	.use(vhost(
-		/^ysyx.(org|cc|dev|local)$/i,
+		/^ysyx\.(org|cc|dev|local)$/i,
 		// Routing strategy
 		home,
 		// Static server can be either a static dist or vite dev server
@@ -51,32 +48,32 @@ const server = express()
 				return proxy(config.devProxy['@'])
 			})()
 			// Static file server
+			// eslint-disable-next-line spellcheck/spell-checker
 			: express.static(resolveDistPath('ysyx')),
 		// Serve index.html
 		async (req, res, next) => {
 			try {
 				return await new Promise((resolve, reject) => {
 					res.sendFile(
-						'index.html',
+						'./index.html',
 						{ root: resolveDistPath('ysyx') },
 						e => {
-							if (e instanceof Error) return reject(e)
-							resolve()
+							if (e instanceof Error) reject(e)
+							else resolve()
 						})
 				})
 			} catch (e) {
-				logger.error('Cannot find index.html for root PWA')
-				return next()
+				next(e)
 			}
 		}
 	))
 	// DOCS
-	.use(vhost(/^docs.ysyx.(org|cc|dev|local)$/i, docs))
+	.use(vhost(/^docs\.ysyx\.(org|cc|dev|local)$/i, docs))
 	// FORUM
-	.use(vhost(/^forum.ysyx.(org|cc|dev|local)$/i, forum))
+	.use(vhost(/^forum\.ysyx\.(org|cc|dev|local)$/i, forum))
 	// SPACE
 	.use(vhost(
-		/^space.ysyx.(org|cc|dev|local)$/i,
+		/^space\.ysyx\.(org|cc|dev|local)$/i,
 		// Session preprocessor
 		withSession(),
 		// Static file server
@@ -84,7 +81,7 @@ const server = express()
 	))
 	// UPLOAD
 	.use(vhost(
-		/^upload.ysyx.(org|cc|dev|local)$/i,
+		/^upload\.ysyx\.(org|cc|dev|local)$/i,
 		proxy(new Resolved('@upload', false).resolver)
 	))
 	// Uncaught request handler
@@ -98,5 +95,12 @@ const server = express()
 	})
 	// Request error handler
 	.use(errorHandler)
-	// Open listening port
-Resolved.launch(server)
+// Launch server
+Resolved.launch(server).then(httpServer => {
+	if (httpServer) httpServer.on('upgrade', (req, socket, head) => {
+		const { headers: { host, connection, upgrade }, url, method } = req
+		server.handle(req, new WebsocketResponse(req, socket, head), () => {
+			socket.close('No handler for this request')
+		})
+	})
+})
