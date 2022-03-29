@@ -14,14 +14,12 @@ Whether group information is added to the list is according to the group's visib
 ```js
 response = {
     // If group's visibility is 'ALL', it would be added to the array.
-    groups:{
+    groups: [...{
         // Group ID
         id: String,
         // Group name
         name: String,
-        // number of members
-        number: Number
-    }[]
+    }]
 }
 ```
 ## POST `/groups/:groupID` - `JSON`
@@ -30,17 +28,17 @@ Return information of Group&lt;groupID&gt;.
 Whether group information is visible is according to the group's visibility to this user.
 ```js
 response = {
-    members: 
-    // Group member information
-    {
-        // User ID
-        id: String,
-        // User name
-        name: String,
-    }[],
-    // Description of the group
-    details: String | undefined
-}
+        members: 
+        // Group member information
+        {
+            // User ID
+            id: String,
+            // User name
+            name: String,
+        }[],
+        // Description of the group
+        details: String | undefined
+    }
     | '[1] Group not found'
     | '[2] Privilege denied'
 ```

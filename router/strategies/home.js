@@ -12,7 +12,7 @@ import { sendMail } from '../../modules/mailer/lib.js'
 import withSession from 'lib/middleware/withSession.js'
 import wrap from 'utils/wrapAsync.js'
 // AppData for current scope
-let appData = new AppData('router/home')
+let appData = new AppData('@tmp')
 /**
  * Server instance
  */
