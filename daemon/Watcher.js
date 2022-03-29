@@ -1,7 +1,7 @@
 import { createLogger, format } from 'winston'
-import { Args } from '../lib/env.js'
-import { consoleTransport, levels } from '../lib/logger.js'
-import dbInit from '../utils/mongo.js'
+import { Args } from 'lib/env.js'
+import { consoleTransport, levels } from 'lib/logger.js'
+import dbInit from 'utils/mongo.js'
 const logger = createLogger({
 	level: Args.logLevel || 'verbose',
 	levels,
@@ -13,7 +13,7 @@ export default async function watchLog(
 	onChange = (...args) => console.log(args)
 ) {
 	/**
-	 * @type {import('../utils/mongo.js').MongoCollection}
+	 * @type {import('utils/mongo.js').MongoCollection}
 	 */
 	const log = dbInit(`${collectionName}/R`)[collectionName]
 	let d = new Date()

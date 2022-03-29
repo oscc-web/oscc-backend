@@ -1,5 +1,5 @@
 import { IncomingMessage } from 'http'
-import { Rx } from '../lib/env.js'
+import { Rx } from 'lib/env.js'
 
 IncomingMessage.prototype.__defineGetter__(
 	'origin',

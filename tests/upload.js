@@ -1,5 +1,5 @@
-import { init, config, PROJECT_ROOT } from '../lib/env.js'
-import dbInit from '../utils/mongo.js'
+import { init, config, PROJECT_ROOT } from 'lib/env.js'
+import dbInit from 'utils/mongo.js'
 import 'colors'
 import fs from 'fs-extra'
 import http from 'http'

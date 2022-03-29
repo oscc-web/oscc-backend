@@ -5,7 +5,7 @@ const HUB = new EventEmitter
 // Delayed creation of logger to resolve circular import
 let _logger_ = new Promise(res => {
 	process.nextTick(() =>
-		import('../lib/logger.js')
+		import('lib/logger.js')
 			.then(({ createCollapsedLog }) =>
 				res(_logger_ = createCollapsedLog())
 			)
@@ -181,7 +181,7 @@ export class ProcessTree extends MessageHub {
 if (process?.env?.NODE_ENV === 'development') {
 	// Child process logic
 	_logger_.then(async logger => {
-		const { PID } = await import('../lib/env.js')
+		const { PID } = await import('lib/env.js')
 		const pt = new ProcessTree(PID)
 		pt.sendRelay()
 		if (!process.send) {

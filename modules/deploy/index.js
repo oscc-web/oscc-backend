@@ -3,11 +3,11 @@ import nodemailer from 'nodemailer'
 import fs from 'fs'
 import soda from 'sodajs/dist/soda.node.js'
 // Environmental setup
-import { config, PROJECT_ROOT, DOMAIN } from '../../lib/env.js'
-import logger from '../../lib/logger.js'
-import statusCode from '../../lib/status.code.js'
-import errorHandler from '../../utils/errorHandler.js'
-import Resolved from '../../utils/resolved.js'
+import { config, PROJECT_ROOT, DOMAIN } from 'lib/env.js'
+import logger from 'lib/logger.js'
+import statusCode from 'lib/status.code.js'
+import errorHandler from 'utils/errorHandler.js'
+import Resolved from 'utils/resolved.js'
 logger.info('Starting server')
 const server = express()
 	.use((req, res) => {

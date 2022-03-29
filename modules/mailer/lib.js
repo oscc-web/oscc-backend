@@ -1,7 +1,7 @@
 import http from 'http'
-import { extractIdentityFromURL } from '../../lib/env.js'
-import statusCode from '../../lib/status.code.js'
-import Resolved from '../../utils/resolved.js'
+import { extractIdentityFromURL } from 'lib/env.js'
+import statusCode from 'lib/status.code.js'
+import Resolved from 'utils/resolved.js'
 // Create a pending service resolution
 const resolver = new Resolved(extractIdentityFromURL(import.meta.url), false).resolver
 /**

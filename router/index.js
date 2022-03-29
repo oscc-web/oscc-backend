@@ -1,20 +1,20 @@
 // Imports
-import { resolveDistPath, config, Rx, Args } from '../lib/env.js'
-import logger from '../lib/logger.js'
+import { resolveDistPath, config, Rx, Args } from 'lib/env.js'
+import logger from 'lib/logger.js'
 import express from 'express'
 // Middleware
-import vhost from '../lib/middleware/vhost.js'
-import proxy from '../lib/middleware/proxy.js'
-import withSession from '../lib/middleware/withSession.js'
-import errorHandler from '../utils/errorHandler.js'
+import vhost from 'lib/middleware/vhost.js'
+import proxy from 'lib/middleware/proxy.js'
+import withSession from 'lib/middleware/withSession.js'
+import errorHandler from 'utils/errorHandler.js'
 // Strategies
 import home from './strategies/home.js'
 import docs from './strategies/docs.js'
 import forum from './strategies/forum.js'
 // Libraries
-import statusCode from '../lib/status.code.js'
-import Resolved from '../utils/resolved.js'
-import { WebsocketResponse } from '../utils/wsResponse.js'
+import statusCode from 'lib/status.code.js'
+import Resolved from 'utils/resolved.js'
+import { WebsocketResponse } from 'utils/wsResponse.js'
 // Compose the server
 const server = express()
 	// Remove express powered-by header

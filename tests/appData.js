@@ -1,9 +1,9 @@
 import Test from './Test.js'
 import fs from 'fs-extra'
-import { AppData, AppDataWithFs } from '../lib/appData.js'
-import { seed } from '../utils/crypto.js'
-import { PROJECT_ROOT } from '../lib/env.js'
-import User from '../lib/user.js'
+import { AppData, AppDataWithFs } from 'lib/appData.js'
+import { seed } from 'utils/crypto.js'
+import { PROJECT_ROOT } from 'lib/env.js'
+import User from 'lib/user.js'
 
 let appID = 'testAppID',
 	user = new User({ userID: seed(12) }),

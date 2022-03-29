@@ -1,5 +1,5 @@
-import { AppDataWithFs } from '../../lib/appData.js'
-import CustomObject from '../../utils/customObject.js'
+import { AppDataWithFs } from 'lib/appData.js'
+import CustomObject from 'utils/customObject.js'
 
 export default class Deployer extends CustomObject {
 	/**

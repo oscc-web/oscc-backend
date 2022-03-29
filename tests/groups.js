@@ -1,8 +1,8 @@
 import Test from './Test.js'
-import User from '../lib/user.js'
-import Group from '../lib/groups.js'
-import { PRIV } from '../lib/privileges.js'
-import { seed } from '../utils/crypto.js'
+import User from 'lib/user.js'
+import Group from 'lib/groups.js'
+import { PRIV } from 'lib/privileges.js'
+import { seed } from 'utils/crypto.js'
 let G = {
 		ta: `test-${seed(16)}`,
 		web: `test-${seed(16)}`,

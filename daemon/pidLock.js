@@ -1,7 +1,7 @@
 import { resolve } from 'path'
 import { existsSync, writeFileSync, readFileSync } from 'fs'
-import { PROJECT_ROOT } from '../lib/env.js'
-import logger from '../lib/logger.js'
+import { PROJECT_ROOT } from 'lib/env.js'
+import logger from 'lib/logger.js'
 const pid_path = resolve(PROJECT_ROOT, 'var/pid')
 export function getLock() {
 	// Check if a server cluster is currently running
