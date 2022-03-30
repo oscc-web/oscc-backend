@@ -28,10 +28,10 @@ const server = express()
 					}
 					// Check if requested fields exist in payload
 					let { template, args, to } = payload
-					if (false
-					|| !template || (typeof template !== 'string')
-					|| !args || (typeof args !== 'object')
-					|| !to || (typeof to !== 'string')
+					if (false ||
+						!template || (typeof template !== 'string') ||
+						!args || (typeof args !== 'object') ||
+						!to || (typeof to !== 'string')
 					) return logger.warn('Request has insufficient arguments: ' + JSON.stringify({ to, template, args })) && res.status(400).send()
 					let subject, html
 					try {
@@ -43,19 +43,6 @@ const server = express()
 						res.status(statusCode.ClientError.BadRequest).end()
 						return
 					}
-					// fs.writeFileSync(`${PROJECT_ROOT}/var/log/mailer/${template}.out.html`, html)
-					transport.sendMail({
-						from: SMTP.auth.user,
-						sender: SMTP.sender || 'Mail bot',
-						to,
-						subject,
-						html
-					})
-						.then(() => {
-							res.status(statusCode.Success.OK).send()
-							logger.info(`Mail "${subject}" sent to ${to} with args ${JSON.stringify(args)}`)
-						})
-						.catch(e => errorHandler(e, req, res))
 				})
 		}
 	})

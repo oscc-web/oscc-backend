@@ -42,7 +42,7 @@
     "scripts": "scripts"
   },
   "scripts": {
-    "dev": "node . -d"
+    "lint": "eslint . --fix"
   },
   "repository": {
     "type": "git",
