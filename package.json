@@ -42,7 +42,8 @@
     "scripts": "scripts"
   },
   "scripts": {
-    "lint": "eslint . --fix"
+    "lint": "eslint . --fix",
+    "stat": "cloc --exclude-dir=node_modules,var --exclude-ext=json ."
   },
   "repository": {
     "type": "git",
