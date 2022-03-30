@@ -1,5 +1,5 @@
 import { AppDataWithFs } from 'lib/appDataWithFs.js'
-import { statusCode } from 'lib/status.code.js'
+import statusCode from 'lib/status.code.js'
 import logger from 'lib/logger.js'
 let appDataWithFs = new AppDataWithFs('user-profile')
 export async function getUserAvatar(req, res, next) {

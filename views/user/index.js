@@ -36,8 +36,8 @@ const server = express()
 	// get :userID and push it into request
 	.use(conditional(({ url }) => {
 		if (url.startsWith('/user/')) {
+			let userID = ((url.match(/^(\/user\/)\w*(?=\/)/g))[0]).replace('/user/', '')
 			url = url.replace(/^\/user\/(.*?)\/?/g, '')
-			let userID = (url.match(/^(\/user\/)\w*(?=\/)/g)[0]).replace('/user/', '')
 			return {
 				userID,
 				url: url.split(userID)[1]
@@ -48,61 +48,67 @@ const server = express()
 		logger.errAcc(`Session not found (requesting ${req.headers.host}${req.url} from ${req.origin})`)
 		res.status(statusCode.ClientError.Unauthorized).end()
 	}),
-	async (req, res, next) => { next() })
+	async (req, res, next) => {
+		next()
+	})
 	// Get user's avatar
-	.use(conditional(({ url, method }) =>
-		url === 'avatar' && method === 'GET'
-	),
-	conditional(({ method }) =>
-		method === 'POST'
-	).otherwise((req, res, next) => {
-		logger.errAcc(`${req.method} not allowed (requesting ${req.headers.host}${req.url} from ${req.origin})`)
-		res.status(statusCode.ClientError.MethodNotAllowed).end()
-	}),
-	getUserAvatar())
+	.use(conditional(({ url, method }) => url === '/avatar',
+		conditional(({ method }) =>
+			method === 'GET'
+		).otherwise((req, res, next) => {
+			logger.errAcc(`${req.method} not allowed (requesting ${req.headers.host}${req.url} from ${req.origin})`)
+			res.status(statusCode.ClientError.MethodNotAllowed).end()
+		}),
+		async (req, res, next) => {
+			await getUserAvatar(req, res, next)
+		})
+	)
 	// View user's profile
-	.use(conditional(({ url, method }) =>
-		url === '/' && method === 'POST'
-	),
-	conditional(({ method }) =>
-		method === 'POST'
-	).otherwise((req, res, next) => {
-		logger.errAcc(`${req.method} not allowed (requesting ${req.headers.host}${req.url} from ${req.origin})`)
-		res.status(statusCode.ClientError.MethodNotAllowed).end()
-	}),
-	viewUserProfile())
+	.use(conditional(({ url, method }) => url === '/',
+		conditional(({ method }) =>
+			method === 'POST'
+		).otherwise((req, res, next) => {
+			logger.errAcc(`${req.method} not allowed (requesting ${req.headers.host}${req.url} from ${req.origin})`)
+			res.status(statusCode.ClientError.MethodNotAllowed).end()
+		}),
+		async (req, res, next) => {
+			await viewUserProfile(req, res, next)
+		})
+	)
 	// Update user's mail
-	.use(conditional(({ url, method }) =>
-		url === 'updateMail' && method === 'POST'
-	),
-	conditional(({ method }) =>
-		method === 'POST'
-	).otherwise((req, res, next) => {
-		logger.errAcc(`${req.method} not allowed (requesting ${req.headers.host}${req.url} from ${req.origin})`)
-		res.status(statusCode.ClientError.MethodNotAllowed).end()
-	}),
-	updateMail())
+	.use(conditional(({ url, method }) => url === '/updateMail',
+		conditional(({ method }) =>
+			method === 'POST'
+		).otherwise((req, res, next) => {
+			logger.errAcc(`${req.method} not allowed (requesting ${req.headers.host}${req.url} from ${req.origin})`)
+			res.status(statusCode.ClientError.MethodNotAllowed).end()
+		}),
+		async (req, res, next) => {
+			await updateMail(req, res, next)
+		})
+	)
 	// Update user's profile
-	.use(conditional(({ url, method }) =>
-		url === 'update' && method === 'POST'
-	),
-	conditional(({ method }) =>
-		method === 'POST'
-	).otherwise((req, res, next) => {
-		logger.errAcc(`${req.method} not allowed (requesting ${req.headers.host}${req.url} from ${req.origin})`)
-		res.status(statusCode.ClientError.MethodNotAllowed).end()
-	}),
-	updateUserProfile())
+	.use(conditional(({ url, method }) => url === '/update',
+		conditional(({ method }) =>
+			method === 'POST'
+		).otherwise((req, res, next) => {
+			logger.errAcc(`${req.method} not allowed (requesting ${req.headers.host}${req.url} from ${req.origin})`)
+			res.status(statusCode.ClientError.MethodNotAllowed).end()
+		}),
+		async (req, res, next) => {
+			await updateUserProfile(req, res, next)
+		}))
 	// Update user's password
-	.use(conditional(({ url, method }) =>
-		url === 'updatePassword' && method === 'POST'
-	),
-	conditional(({ method }) =>
-		method === 'POST'
-	).otherwise((req, res, next) => {
-		logger.errAcc(`${req.method} not allowed (requesting ${req.headers.host}${req.url} from ${req.origin})`)
-		res.status(statusCode.ClientError.MethodNotAllowed).end()
-	}),
-	updateUserPassword())
+	.use(conditional(({ url, method }) => url === '/updatePassword',
+		conditional(({ method }) =>
+			method === 'POST'
+		).otherwise((req, res, next) => {
+			logger.errAcc(`${req.method} not allowed (requesting ${req.headers.host}${req.url} from ${req.origin})`)
+			res.status(statusCode.ClientError.MethodNotAllowed).end()
+		}),
+		async (req, res, next) => {
+			await updateUserPassword(req, res, next)
+		})
+	)
 // Launch server
 Resolved.launch(server)

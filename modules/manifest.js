@@ -4,6 +4,5 @@ const res = getResolver(import.meta)
 export default {
 	[res('mailer')]: { cluster: 2 },
 	[res('upload')]: { cluster: 5 },
-	[res('userView')]: { cluster: 2 },
 	// [res('deploy')]: { cluster: 2 },
 }
