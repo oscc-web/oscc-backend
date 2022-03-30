@@ -36,9 +36,9 @@ server.use(
 						fileSize,
 						filePath,
 						// ... (req.headers || {}),
-						...{ type:req.headers?.['content-type'] },
+						...{ type: req.headers?.['content-type'] },
 						// fs.stat
-						... await new Promise((resolve, reject) => stat(filePath, (err, stats) => {
+						...await new Promise((resolve, reject) => stat(filePath, (err, stats) => {
 							if (err) reject(err)
 							else resolve(stats)
 						}))
@@ -48,7 +48,7 @@ server.use(
 					await hook(req, res, () =>
 						res.status(statusCode.Success.OK).end(fileID)
 					)
-				} 
+				}
 			)),
 			function uploadErrorHandler(err, req, res, next) {
 				logger.errAcc(err.stack)

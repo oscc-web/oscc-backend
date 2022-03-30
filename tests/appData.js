@@ -29,7 +29,7 @@ new Test('load appData')
 	.expect('Test app message')
 new Test('update appData')
 	.run(async () => {
-		return (await appData.update({ msg:'Updated app message' }, { user, appID })).acknowledged
+		return (await appData.update({ msg: 'Updated app message' }, { user, appID })).acknowledged
 	})
 	.expect(true)
 new Test('load appData after updating')
@@ -45,7 +45,7 @@ new Test('delete appData')
 let fileID = 'testFile'
 appID = 'testFileAppID'
 user = new User({ userID: seed(12) })
-let text ='test file string'
+let text = 'test file string'
 new Test('create AppDataWithFs')
 	.run(() => {
 		appData = new AppDataWithFs(appID)
@@ -60,7 +60,7 @@ new Test('insert a file')
 	.expect(true)
 new Test('acquireFile')
 	.run(async () => {
-		return (await appData.acquireFile( { user, appID })).fileID
+		return (await appData.acquireFile({ user, appID })).fileID
 	})
 	.expect('testFile')
 new Test('loadFile')

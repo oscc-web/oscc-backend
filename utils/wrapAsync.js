@@ -8,7 +8,7 @@ function errorHandler(e) {
  * @param {import('express').Handler} fn
  * @param {String} name
  * Name of the wrapped function, defaults to the input function name
- * Can accept any Function or Promise 
+ * Can accept any Function or Promise
  * @returns {Function | Promise}
  */
 export default function wrap(fn, name = fn?.name) {
@@ -25,9 +25,9 @@ export default function wrap(fn, name = fn?.name) {
 }
 /**
  * Set name of a function to given name
- * @param {Function} fn 
- * @param {String} name 
- * @returns 
+ * @param {Function} fn
+ * @param {String} name
+ * @returns
  */
 export function setFunctionName(fn, name = fn?.name) {
 	Object.defineProperty(fn, 'name', { value: name })

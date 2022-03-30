@@ -14,9 +14,7 @@ let userID = seed(12),
 	user
 new Test('create user')
 	.run(() => {
-		user = new User({
-			_id: userID, name, mail, OAuthTokens, groups
-		})
+		user = new User({ _id: userID, name, mail, OAuthTokens, groups })
 		return [user instanceof User, user.info]
 	})
 	.expect(([_]) => _)

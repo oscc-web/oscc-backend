@@ -39,7 +39,7 @@ export default class Tree {
 	}
 	/**
 	 * Width of serialized chunk
-	 * @type {Number} width 
+	 * @type {Number} width
 	 */
 	get width() {
 		return this.keys.reduce((m, s) => Math.max(m, noColor(s).length), 0)
@@ -114,7 +114,7 @@ export default class Tree {
 		return widths
 	}
 	/**
-	 * @param {Object | Serializable} data 
+	 * @param {Object | Serializable} data
 	 */
 	constructor(data) {
 		if (data && { object: 1, function: 1 }[typeof data]) {

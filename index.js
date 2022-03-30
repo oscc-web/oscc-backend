@@ -19,7 +19,7 @@ export async function startServer() {
 	}
 }
 /**
- * @typedef 
+ * @typedef
  */
 switch (__COMMAND__) {
 	case 'install':

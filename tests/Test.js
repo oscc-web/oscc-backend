@@ -31,10 +31,10 @@ export default class Test {
 	 */
 	promise
 	/**
-	 * 
-	 * @param {String} name 
-	 * @param {Number | String | Function<Boolean> | undefined} expect 
-	 * @param {Boolean} endOnUncaughtError 
+	 *
+	 * @param {String} name
+	 * @param {Number | String | Function<Boolean> | undefined} expect
+	 * @param {Boolean} endOnUncaughtError
 	 */
 	constructor(name, expect = () => true, endOnUncaughtError = false) {
 		[
@@ -47,7 +47,7 @@ export default class Test {
 	// Push test into queue
 	/**
 	 * register callback function to run
-	 * @param {Function} f 
+	 * @param {Function} f
 	 * @returns {Test}
 	 */
 	run(f) {
@@ -99,7 +99,7 @@ export default class Test {
 	static silent = false
 	/**
 	 * Asynchronous test queue
-	 * @param {Test} test 
+	 * @param {Test} test
 	 */
 	static queue(test) {
 		return new Promise(res => {

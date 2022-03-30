@@ -1,5 +1,1 @@
-export default {
-	'@': {
-		pwa: true,
-	},
-}
+export default { '@': { pwa: true, }, }

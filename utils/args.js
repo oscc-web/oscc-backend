@@ -48,9 +48,7 @@ const args = {
 		mode(mode) {
 			const is_production_mode = !/^dev/i.test(mode)
 			process.env.NODE_ENV = is_production_mode ? 'production' : 'development'
-			return {
-				mode: process.env.NODE_ENV.toUpperCase()
-			}
+			return { mode: process.env.NODE_ENV.toUpperCase() }
 		},
 		useDevProxy(arg = true) {
 			arg = JSON.parse(arg)
@@ -217,7 +215,7 @@ async function makeArgv() {
 		} else {
 			const command = arg.toLocaleLowerCase()
 			if (command in commands)
-				return  commands[command](), { __COMMAND__: command }
+				return commands[command](), { __COMMAND__: command }
 			else
 			// Illegal argument
 				throw new TypeError(`Illegal argument: ${arg}`)

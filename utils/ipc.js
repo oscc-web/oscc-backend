@@ -96,7 +96,7 @@ export class MessageHub extends CustomObject {
 	sendMessage(...args) { return this.constructor.sendMessage(...args) }
 	/**
 	 * The default message interceptor, should be re-implemented in child classes
-	 * @param {Object} message 
+	 * @param {Object} message
 	 */
 	onMessage(message) {
 		_logger_.warn(`Got message for ${this.constructor.name} without a handler: ${JSON.stringify(message)}`)

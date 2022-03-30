@@ -159,8 +159,8 @@ const server = express()
 export default (req, res, next) => server.handle(req, res, next)
 /**
  * Send user info as JSON string
- * @param {User} user 
- * @param {import('express').Response} res 
+ * @param {User} user
+ * @param {import('express').Response} res
  * @returns {Promise<import('express').Response>}
  */
 async function sendUserInfo(user, res) {

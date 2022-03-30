@@ -10,9 +10,9 @@ const resolver = new Resolved(extractIdentityFromURL(import.meta.url), false).re
 
 /**
  * Send email to specified address using certain template
- * @param {String} address 
- * @param {mailTemplate} template 
- * @param {Object} args 
+ * @param {String} address
+ * @param {mailTemplate} template
+ * @param {Object} args
  */
 export async function sendMail(address, template, args) {
 	const target = await resolver()

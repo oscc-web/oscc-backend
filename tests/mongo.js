@@ -38,11 +38,7 @@ new Test('first, update entry with updated: <DateString>')
 	.run(async () => {
 		return await db.test.update(
 			{ _id: id },
-			{
-				$set: {
-					updated: (new Date).toISOString()
-				}
-			})
+			{ $set: { updated: (new Date).toISOString() } })
 	})
 	.expect(({ acknowledged, modifiedCount }) => acknowledged && modifiedCount)
 

@@ -42,7 +42,7 @@ export async function setLock(currentPid = '') {
 			logger.error('Existing server process took too long to exit, aborting')
 			process.exit(1)
 		}
-		pending ++
+		pending++
 		await new Promise(res => setTimeout(res, 100))
 	}
 	// Save current process's own pid

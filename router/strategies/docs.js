@@ -17,7 +17,7 @@ export default express()
 		).otherwise(
 			(req, res) => res
 				.redirect(
-					`https://${config.domain}/${	
+					`https://${config.domain}/${
 						req.session instanceof Session
 							? statusCode.ClientError.Forbidden
 							: statusCode.ClientError.Unauthorized

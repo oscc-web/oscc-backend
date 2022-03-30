@@ -22,9 +22,7 @@ let req = http.request(options, res =>
 )
 req.end()
 await new Promise(res => setTimeout(() => res(), TIME_OUT))
-options.headers = {
-	'Cookie': '__internal_user_info={"id":123,"name":"wxl"}',
-}
+options.headers = { 'Cookie': '__internal_user_info={"id":123,"name":"wxl"}', }
 console.log('Test: fetch upload response code is 405, returns as expected'.green)
 req = http.request(options, res =>
 	console.log(res.statusCode.toString().blue)

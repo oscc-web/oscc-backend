@@ -92,7 +92,7 @@ initialize(rp.context)
  */
 let pending = undefined
 /**
- * @param {Boolean} resume 
+ * @param {Boolean} resume
  * @returns {PendingState}
  */
 async function getConsoleLock(resume = false) {
@@ -110,8 +110,8 @@ async function getConsoleLock(resume = false) {
 // Take over console's std-out
 const logProxy = new class LogProxy extends Writable {
 	/**
-	 * @param {Buffer | String} chunk 
-	 * @param  {...any} args 
+	 * @param {Buffer | String} chunk
+	 * @param  {...any} args
 	 */
 	async write(chunk, ...args) {
 		const { stdout } = process

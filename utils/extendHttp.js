@@ -3,18 +3,18 @@ import { Rx } from 'lib/env.js'
 
 IncomingMessage.prototype.__defineGetter__(
 	'origin',
-	function () {
-		const origin = undefined ||
-			this.headers['x-forwarded-for'] ||
-			this.socket.remoteAddress ||
-			this.ip
+	function() {
+		const origin = undefined
+			|| this.headers['x-forwarded-for']
+			|| this.socket.remoteAddress
+			|| this.ip
 		return origin.replace(/^((0000|ffff)?:)*/gi, '')
 	}
 )
 
 IncomingMessage.prototype.__defineGetter__(
 	'parsedCookies',
-	function () {
+	function() {
 		// Try to use cached result
 		if ('$parsedCookies' in this) return this.$parsedCookies
 		// Raw cookies string joined with '; '
@@ -41,7 +41,7 @@ IncomingMessage.prototype.__defineGetter__(
 
 IncomingMessage.prototype.__defineGetter__(
 	'internalCookies',
-	function () {
+	function() {
 		// Try to use cached result
 		if ('$internalCookies' in this) return this.$internalCookies
 		// Parse cookies
@@ -61,12 +61,12 @@ IncomingMessage.prototype.__defineGetter__(
  * Filters the cookies of a request according to given filter
  * @param {(name: String, value: String) => Boolean} filter
  * Returns whether a cookie will remain
- * true: cookie stays in the header  
+ * true: cookie stays in the header
  * false: cookie will be deleted from request header
  * @returns {Array}
  * Array containing all deleted cookies
  */
-IncomingMessage.prototype.filterCookies = function (filter = () => false) {
+IncomingMessage.prototype.filterCookies = function(filter = () => false) {
 	let filteredCookies = []
 	this.headers.cookie = this.cookie = (this.headers.cookie || this.cookie || '')
 		.split(/;\s*/g)
@@ -83,12 +83,12 @@ IncomingMessage.prototype.filterCookies = function (filter = () => false) {
  * Inject cookies to request header according to given object
  * @param {{name: value}} filter
  * Returns whether a cookie will remain
- * true: cookie stays in the header  
+ * true: cookie stays in the header
  * false: cookie will be deleted from request header
  * @returns {undefined}
  * Array containing all deleted cookies
  */
-IncomingMessage.prototype.injectCookies = function (cookies) {
+IncomingMessage.prototype.injectCookies = function(cookies) {
 	// Clear cached $parsedCookies and $internalCookies since we altered the header
 	delete this.$internalCookies
 	delete this.$parsedCookies
@@ -121,7 +121,7 @@ IncomingMessage.prototype.injectCookies = function (cookies) {
 	this.cookie = this.headers.cookie = cookieList.join(';')
 }
 
-IncomingMessage.prototype.injectInternalCookies = function (cookies) {
+IncomingMessage.prototype.injectInternalCookies = function(cookies) {
 	// Validate input
 	if (!cookies || typeof cookies !== 'object')
 		throw new TypeError('Failed to inject cookies because input is invalid', cookies)

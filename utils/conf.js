@@ -23,7 +23,7 @@
 
 /**
  * Wrapper function to enable config syntax highlighting.
- * @param {Config} conf 
+ * @param {Config} conf
  * @returns {Config}
  */
 export function defineConfig(conf) {

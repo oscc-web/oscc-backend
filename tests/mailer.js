@@ -5,16 +5,12 @@ let options = {
 	hostname: '127.0.0.1',
 	port: 9998,
 	method: 'POST',
-	headers: {
-		'Content-Type': 'application/json',
-	}
+	headers: { 'Content-Type': 'application/json', }
 }
 let payload = {
 	template: 'validateEmail',
 	to: 'wxl994119862@stu.zzu.edu.cn',
-	args: {
-		link: 'ysyx.org/register?token=token123456'
-	}
+	args: { link: 'ysyx.org/register?token=token123456' }
 }
 new Test('fetch mailer with correct option and payload')
 	.run(async () => {

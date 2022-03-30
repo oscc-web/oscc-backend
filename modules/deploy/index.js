@@ -28,10 +28,10 @@ const server = express()
 					}
 					// Check if requested fields exist in payload
 					let { template, args, to } = payload
-					if (false ||
-						!template || (typeof template !== 'string') ||
-						!args || (typeof args !== 'object') ||
-						!to || (typeof to !== 'string')
+					if (false
+						|| !template || (typeof template !== 'string')
+						|| !args || (typeof args !== 'object')
+						|| !to || (typeof to !== 'string')
 					) return logger.warn('Request has insufficient arguments: ' + JSON.stringify({ to, template, args })) && res.status(400).send()
 					let subject, html
 					try {
@@ -56,7 +56,7 @@ function render(templateName, args) {
 		indexHtmlPath = `${path}/index.html`,
 		indexCssPath = `${path}/index.css`,
 		templateCssPath = `${path}/${templateName}.css`
-	// check if templates exist 
+	// check if templates exist
 	if (fs.existsSync(indexHtmlPath) && fs.existsSync(templateHtmlPath)) {
 		let subject,
 			templateHtml = fs
@@ -85,8 +85,10 @@ function render(templateName, args) {
 					/\{\{\s*(?<entry>\w+)\s*\}\}/g,
 					(...arg) => {
 						let { entry } = arg.pop()
-						return { templateCss, indexCss, html: soda(
-							templateHtml, { DOMAIN, ...args }) }[entry]
+						return {
+							templateCss, indexCss, html: soda(
+								templateHtml, { DOMAIN, ...args })
+						}[entry]
 					}
 				)
 		return { subject, html }

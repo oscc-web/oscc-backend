@@ -16,7 +16,7 @@ export default class Process extends CustomObject {
 	#proc
 	get proc() { return this.#proc }
 	/**
-	 * @typedef {import('utils/args.js').Arguments} ProcessAdditionalArguments 
+	 * @typedef {import('utils/args.js').Arguments} ProcessAdditionalArguments
 	 * @property {Boolean} [detached]
 	 * Indicates whether the process will be detached from current process.
 	 * This is designed to be used along with 'start', 'restart' or 'stop'
@@ -125,7 +125,7 @@ export default class Process extends CustomObject {
 	}
 	/**
 	 * Kill this process using given signal
-	 * @param {NodeJS.Signals} signal 
+	 * @param {NodeJS.Signals} signal
 	 * @returns {Promise<Number>} exit code
 	 */
 	async kill(signal = 'SIGINT') {

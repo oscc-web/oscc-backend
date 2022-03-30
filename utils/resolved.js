@@ -72,8 +72,8 @@ export default class Resolved extends MessageHub {
 	}
 	/**
 	 * Create a new pending promise awaiting the resolution of
-	 * a named service 
-	 * @param {*} serviceName 
+	 * a named service
+	 * @param {*} serviceName
 	 */
 	constructor(serviceName, blocking = true) {
 		super()
@@ -94,7 +94,7 @@ export default class Resolved extends MessageHub {
 	 * Name of the service of this incoming IpcMsg
 	 */
 	/**
-	 * Check if incoming ipcMsg 
+	 * Check if incoming ipcMsg
 	 * @param {IpcMsg} ipcMsg
 	 */
 	evaluate(ipcMsg) {
@@ -139,7 +139,7 @@ export default class Resolved extends MessageHub {
 	static #resolveList = []
 	/**
 	 * Register a new resolved service into the list
-	 * @param {Resolved} resolved 
+	 * @param {Resolved} resolved
 	 */
 	static push(resolved) {
 		if (!(resolved instanceof this)) throw new TypeError
@@ -160,7 +160,7 @@ export default class Resolved extends MessageHub {
 	}
 	/**
 	 * Send an IPC broadcast to all sibling processes
-	 * @param {import('express').Express} server 
+	 * @param {import('express').Express} server
 	 * @param {String} name
 	 * @returns {Promise<import('http').Server>} port number
 	 */

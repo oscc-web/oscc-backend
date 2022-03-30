@@ -21,9 +21,7 @@ let userID = Date.now().toString(36),
 
 new Test('create a temporary for session test')
 	.run(async () => {
-		user = new User({
-			_id: userID, name, mail, OAuthTokens, groups
-		})
+		user = new User({ _id: userID, name, mail, OAuthTokens, groups })
 		// We are skipping password because we do not need to run user.login()
 		await user.update()
 		return { userID: user.userID, info: user.info }

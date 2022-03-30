@@ -1,7 +1,7 @@
 import { MongoClient } from 'mongodb'
 import { config } from 'lib/env.js'
 /**
- * @typedef {Object} mongoConfig 
+ * @typedef {Object} mongoConfig
  * @property {String} password
  * @property {String} [database='ysyx']
  * @property {String} [host='127.0.0.1']
@@ -25,7 +25,7 @@ if (!(username && password && database)) {
 // Error indicating bad mongodb operation
 export class DatabaseOperationError extends Error {}
 export class DatabasePermissionError extends Error {}
-/** 
+/**
 * @param {mongoConfig} mongo configuration of mongodb
 * @returns {String} mongodb connection url
 */
@@ -67,7 +67,7 @@ export class MongoCollection {
 	}
 	/**
 	 * Check if instance has appropriate access to given operation
-	 * @param {'C' | 'R' | 'U' | 'D'} action 
+	 * @param {'C' | 'R' | 'U' | 'D'} action
 	 */
 	#access(action) {
 		if (!this.#privileges[action])
@@ -79,10 +79,10 @@ export class MongoCollection {
 			}[action]} permission for collection ${this.#collectionName}`)
 	}
 	/**
-	 * @param {import('mongodb').Db} connection 
-	 * @param {String} collectionName 
-	 * @param {String} privileges -"crud" 
-	 * @constructor copy crud method from Db.collection(collectionName) 
+	 * @param {import('mongodb').Db} connection
+	 * @param {String} collectionName
+	 * @param {String} privileges -"crud"
+	 * @constructor copy crud method from Db.collection(collectionName)
 	 */
 	constructor(connection, collection, privileges) {
 		this.#collectionName = collection
@@ -97,7 +97,7 @@ export class MongoCollection {
 	}
 	/**
 	 * Insert into collection
-	 * @param {import('mongodb').OptionalId<import('mongodb').Document>} arg 
+	 * @param {import('mongodb').OptionalId<import('mongodb').Document>} arg
 	 * @param {import('mongodb').BulkWriteOptions} options -insert options
 	 * @returns {Promise<import('mongodb').InsertOneResult> | Promise<import('mongodb').InsertManyResult>}
 	 */
@@ -116,8 +116,8 @@ export class MongoCollection {
 	}
 	/**
 	 * Find all entries from collection according to filter
-	 * @param {import('mongodb').Filter<import('mongodb').Document>} filter 
-	 * @param {import('mongodb').FindOptions} options 
+	 * @param {import('mongodb').Filter<import('mongodb').Document>} filter
+	 * @param {import('mongodb').FindOptions} options
 	 * @returns {Promise<import('mongodb').FindCursor>}
 	 */
 	find(filter, options) {
@@ -126,10 +126,10 @@ export class MongoCollection {
 		return this.#collection.find(filter, options)
 	}
 	/**
-	 * Update document that matches 
-	 * @param {import('mongodb').Filter<import('mongodb').Document>} filter 
-	 * @param {import('mongodb').UpdateFilter<import('mongodb').Document>} updateFilter 
-	 * @param {import('mongodb').UpdateOptions | {replace: Boolean}} options 
+	 * Update document that matches
+	 * @param {import('mongodb').Filter<import('mongodb').Document>} filter
+	 * @param {import('mongodb').UpdateFilter<import('mongodb').Document>} updateFilter
+	 * @param {import('mongodb').UpdateOptions | {replace: Boolean}} options
 	 * @returns {Promise<import('mongodb').UpdateResult>}
 	 */
 	update(filter, updateFilter, options) {
@@ -145,9 +145,9 @@ export class MongoCollection {
 		}
 	}
 	/**
-	 * 
-	 * @param {import('mongodb').Filter<import('mongodb').Document>} filter 
-	 * @param {import('mongodb').DeleteOptions} options 
+	 *
+	 * @param {import('mongodb').Filter<import('mongodb').Document>} filter
+	 * @param {import('mongodb').DeleteOptions} options
 	 * @returns {Promise<import('mongodb').DeleteResult>}
 	 */
 	delete(filter, options) {
@@ -158,8 +158,8 @@ export class MongoCollection {
 	}
 	/**
 	 * Create a watcher for this collection
-	 * @param {import('mongodb').Document} pipeline 
-	 * @param {import('mongodb').ChangeStreamOptions} options 
+	 * @param {import('mongodb').Document} pipeline
+	 * @param {import('mongodb').ChangeStreamOptions} options
 	 * @returns {import('mongodb').ChangeStream}
 	 */
 	watch(pipeline, options = {}) {
@@ -177,14 +177,14 @@ async function onConnectionError(e) {
 	} else {
 		connection = await connect(config.mongo, onConnectionError)
 		setTimeout(() => {
-			retryCount ++
+			retryCount++
 		}, 60_000)
 	}
 }
 let connection = await connect(config.mongo, onConnectionError)
 /**
  * @typedef {Object} dbClient
- * @property {MongoCollection} 
+ * @property {MongoCollection}
 
  * @param  {...String} collectionDescriptor -like 'example/CR/U/D'
  * @returns {Object.<string, MongoCollection>}
