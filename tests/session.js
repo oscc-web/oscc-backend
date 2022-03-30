@@ -38,15 +38,15 @@ new Test('create a session with user instance')
 new Test('session preprocessor')
 	.run(async () => {
 		return await new Promise(resolve => {
-			let server = express().use(
+			const server = express().use(
 				Session.preprocessor,
 				async (req, res) => {
 					// Log internal cookies injected by Session preprocessor
-					console.log(('internalCookies: ' + JSON.stringify(req.internalCookies)).blue)
+					console.log(`internalCookies: ${JSON.stringify(req.internalCookies)}`.blue)
 					// End request
 					res.writeHead(200).end()
 					// Retract session result
-					let result = await Session.locate(req)
+					const result = await Session.locate(req)
 					if (result instanceof Session) {
 						server.close()
 						resolve(result)
@@ -64,7 +64,7 @@ new Test('drop session and try accessing it again (expected: session = null)')
 	.run(async () => {
 		await session.drop()
 		return await new Promise(resolve => {
-			let server = express().use(
+			const server = express().use(
 				Session.preprocessor,
 				(req, res) => {
 					res.writeHead(200).end()
@@ -80,14 +80,14 @@ new Test('drop session and try accessing it again (expected: session = null)')
 
 new Test('cleanup session table')
 	.run(async () => {
-		let db = DBInit('session/CRUD')
+		const db = DBInit('session/CRUD')
 		return await db.session.delete({ token })
 	})
 	.expect({ acknowledged: true, deletedCount: 0 })
 
 new Test('cleanup session table')
 	.run(async () => {
-		let db = DBInit('user/CRUD')
+		const db = DBInit('user/CRUD')
 		return await db.user.delete({ _id: user.userID })
 	})
 	.expect({ acknowledged: true, deletedCount: 1 })

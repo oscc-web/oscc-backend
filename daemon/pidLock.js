@@ -18,8 +18,7 @@ export function getLock() {
 				// eslint-disable-next-line no-empty
 			} catch (e) {}
 			// If process exists, send SIGINT
-			if (procExist)
-				return pid
+			if (procExist) return pid
 		}
 	}
 }
@@ -28,16 +27,14 @@ export async function setLock(currentPid = '') {
 	let pid, pending = 0
 	// If process exists, send SIGINT
 	while (pid = getLock()) {
-		if (!pending)
-			try {
-				if (currentPid)
-					logger.info(`Found a running server with pid ${pid}, trying to send SIGINT`)
-				const killed = process.kill(pid, 'SIGINT')
-				if (!killed) throw new Error('failed to kill existing process')
-			} catch (e) {
-				logger.error(`Error terminating existing server process [PID=${pid}]: ${e.stack}`)
-				process.exit(1)
-			}
+		if (!pending) try {
+			if (currentPid) logger.info(`Found a running server with pid ${pid}, trying to send SIGINT`)
+			const killed = process.kill(pid, 'SIGINT')
+			if (!killed) throw new Error('failed to kill existing process')
+		} catch (e) {
+			logger.error(`Error terminating existing server process [PID=${pid}]: ${e.stack}`)
+			process.exit(1)
+		}
 		else if (pending > 600 /* 60 Seconds */) {
 			logger.error('Existing server process took too long to exit, aborting')
 			process.exit(1)

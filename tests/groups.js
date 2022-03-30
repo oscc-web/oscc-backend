@@ -17,17 +17,17 @@ let G = {
 		root: 'root',
 	},
 	/**
-	 * root, ta
+	 * Root, ta
 	 * @type {User}
 	 */
 	tim,
 	/**
-	 * student
+	 * Student
 	 * @type {User}
 	 */
 	john,
 	/**
-	 * default (guest)
+	 * Default (guest)
 	 * @type {User}
 	 */
 	sandy

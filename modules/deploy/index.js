@@ -20,29 +20,19 @@ const server = express()
 				.on('data', chunk => body.push(chunk))
 				.on('end', () => {
 					logger.access(`${req.method} ${req.headers.host}${req.url} from ${req.origin}`)
-					// receive the body of email
+					// Receive the body of email
 					const payload = JSON.parse(body.join(''))
 					if (!payload || typeof payload !== 'object') {
 					// Payload is not a valid JSON object
-						return logger.warn('Request payload is not an JSON object: ' + JSON.stringify(payload)) && res.status(400).send()
+						return logger.warn(`Request payload is not an JSON object: ${JSON.stringify(payload)}`) && res.status(400).send()
 					}
 					// Check if requested fields exist in payload
-					let { template, args, to } = payload
+					const { template, args, to } = payload
 					if (false
-						|| !template || (typeof template !== 'string')
-						|| !args || (typeof args !== 'object')
-						|| !to || (typeof to !== 'string')
-					) return logger.warn('Request has insufficient arguments: ' + JSON.stringify({ to, template, args })) && res.status(400).send()
-					let subject, html
-					try {
-						let renderResult = render(template, args)
-						subject = renderResult.subject
-						html = renderResult.html
-					} catch (error) {
-						logger.warn(error.stack)
-						res.status(statusCode.ClientError.BadRequest).end()
-						return
-					}
+						|| !template || typeof template !== 'string'
+						|| !args || typeof args !== 'object'
+						|| !to || typeof to !== 'string'
+					) return logger.warn(`Request has insufficient arguments: ${JSON.stringify({ to, template, args })}`) && res.status(400).send()
 				})
 		}
 	})
@@ -56,17 +46,17 @@ function render(templateName, args) {
 		indexHtmlPath = `${path}/index.html`,
 		indexCssPath = `${path}/index.css`,
 		templateCssPath = `${path}/${templateName}.css`
-	// check if templates exist
+	// Check if templates exist
 	if (fs.existsSync(indexHtmlPath) && fs.existsSync(templateHtmlPath)) {
 		let subject,
 			templateHtml = fs
 				.readFileSync(templateHtmlPath)
 				.toString()
-				// get title in html template, and delete it from html template.
+				// Get title in html template, and delete it from html template.
 				.replace(
 					/^-{3,}\n(?<content>(.*\n)*?)-{3,}/m,
 					(...args) => {
-						let groups = args.pop()
+						const groups = args.pop()
 						subject = groups?.content.trim() || '来自一生一芯的邮件'
 						return ''
 					}
@@ -77,16 +67,18 @@ function render(templateName, args) {
 			indexCss = fs.existsSync(indexCssPath)
 				? fs.readFileSync(indexCssPath).toString()
 				: '',
-			// replace {{key}} with HTML/CSS template
+			// Replace {{key}} with HTML/CSS template
 			html = fs
 				.readFileSync(indexHtmlPath)
 				.toString()
 				.replace(
 					/\{\{\s*(?<entry>\w+)\s*\}\}/g,
 					(...arg) => {
-						let { entry } = arg.pop()
+						const { entry } = arg.pop()
 						return {
-							templateCss, indexCss, html: soda(
+							templateCss,
+							indexCss,
+							html: soda(
 								templateHtml, { DOMAIN, ...args })
 						}[entry]
 					}

@@ -68,7 +68,7 @@ args = args
 for (const [file, name] of args) {
 	try {
 		await import(file)
-		let results = await Test.run(),
+		const results = await Test.run(),
 			summary = Test.summary(results)
 		if (!Test.silent) console.log(Test.formatSummary(name, summary))
 		failedCount += summary.failed || 0

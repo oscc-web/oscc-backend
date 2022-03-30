@@ -44,7 +44,7 @@ export const connectionOptions = Object.freeze(Object.assign(
 	options
 ))
 /**
- * get connection to mongodb
+ * Get connection to mongodb
  * @param {mongo} options - mongodb connect options
  * @param {(e: Error) => Any} onError
  * @return {Promise<Db>}
@@ -70,13 +70,12 @@ export class MongoCollection {
 	 * @param {'C' | 'R' | 'U' | 'D'} action
 	 */
 	#access(action) {
-		if (!this.#privileges[action])
-			throw new DatabasePermissionError(`Process has no ${{
-				C: 'insert',
-				R: 'find',
-				U: 'update',
-				D: 'delete'
-			}[action]} permission for collection ${this.#collectionName}`)
+		if (!this.#privileges[action]) throw new DatabasePermissionError(`Process has no ${{
+			C: 'insert',
+			R: 'find',
+			U: 'update',
+			D: 'delete'
+		}[action]} permission for collection ${this.#collectionName}`)
 	}
 	/**
 	 * @param {import('mongodb').Db} connection
@@ -196,7 +195,7 @@ export default function dbInit(...collectionDescriptor) {
 		collectionDescriptor
 			.filter(descriptor => !/^\s*(\/|$)/g.test(descriptor))
 			.map(collectionString => {
-				let [collectionName, privileges] = collectionString.split('/', 2)
+				const [collectionName, privileges] = collectionString.split('/', 2)
 				return [
 					collectionName,
 					new MongoCollection(connection, collectionName, privileges || 'R')

@@ -59,10 +59,8 @@ const args = {
 		},
 		port(port) {
 			port = parseInt(port)
-			if (port)
-				return { port }
-			else
-				throw new TypeError(`Bad port number: ${port}`)
+			if (port) return { port }
+			else throw new TypeError(`Bad port number: ${port}`)
 		},
 		cluster(arg = 1) {
 			arg = parseInt(arg)
@@ -81,16 +79,14 @@ const args = {
 		},
 		stackTraceLimit(arg) {
 			arg = parseInt(arg) || undefined
-			if (arg)
-				Error.stackTraceLimit = arg
+			if (arg) Error.stackTraceLimit = arg
 			return { stackTraceLimit: arg }
 		},
 		async kill(arg = 'ysyx\\.(local|org|dev|cc)') {
 			const cmd = `kill $(ps aux | egrep -i "${arg.toUpperCase()}" | grep -v egrep | awk "{print $2}")`
 			console.log(cmd)
 			exec(cmd)
-			// for (const i of [...Array(3).keys()].reverse())
-			await new Promise(r => { /* console.log(i + 1); */ setTimeout(r, 1000) })
+			await new Promise(r => { /* Console.log(i + 1); */ setTimeout(r, 1000) })
 			return {}
 		}
 	},
@@ -191,13 +187,12 @@ async function makeArgv() {
 		.replace(/\s(?!-)/gi, '=')
 		.split(' ')
 		.filter(str => !!str)
-	return Object.assign({}, ...(await allFlatten(argv.map(arg => {
+	return Object.assign({}, ...await allFlatten(argv.map(arg => {
 		if (/^--/.test(arg)) {
 			// Treat argument as flag
 			let [flag, value] = arg.replace(/^--/gi, '').split('=', 2)
 			flag = flag.replace(/-[a-z]/gi, ([_, c]) => c.toUpperCase())
-			if (flag in flags)
-				return flags[flag](value)
+			if (flag in flags) return flags[flag](value)
 			else {
 				// Unrecognized flag
 				throw new TypeError(`Unrecognized flag: --${arg}`)
@@ -206,29 +201,23 @@ async function makeArgv() {
 			// Treat argument as toggle
 			const args = arg.match(/[a-z]/ig)
 			return args.map(async toggle => {
-				if (toggle in toggles)
-					return toggles[toggle]()
-				else
+				if (toggle in toggles) return toggles[toggle]()
 				// Unrecognized toggle
-					throw new TypeError(`Unrecognized toggle: -${toggle}`)
+				else throw new TypeError(`Unrecognized toggle: -${toggle}`)
 			})
 		} else {
 			const command = arg.toLocaleLowerCase()
-			if (command in commands)
-				return commands[command](), { __COMMAND__: command }
-			else
+			if (command in commands) return commands[command](), { __COMMAND__: command }
 			// Illegal argument
-				throw new TypeError(`Illegal argument: ${arg}`)
+			else throw new TypeError(`Illegal argument: ${arg}`)
 		}
-	}))))
+	})))
 }
 
 async function allFlatten(arr) {
 	arr = arr.flat(Infinity)
-	if (arr.filter(p => p instanceof Promise).length)
-		return await allFlatten(await Promise.all(arr))
-	else
-		return arr
+	if (arr.filter(p => p instanceof Promise).length) return await allFlatten(await Promise.all(arr))
+	else return arr
 }
 
 const HELP_MESSAGE = `

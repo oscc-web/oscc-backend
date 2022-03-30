@@ -1,7 +1,7 @@
 import dbInit from 'utils/mongo.js'
 import Test from './Test.js'
 let db
-let id = Date.now().toString(36)
+const id = Date.now().toString(36)
 
 new Test('create connection with C/R access')
 	.run(async () => {

@@ -29,7 +29,7 @@ IncomingMessage.prototype.__defineGetter__(
 					.split(/\s*;\s*/g)
 					// Split cookie name and cookie value
 					.map(str => str.split(/\s*=\s*/g, 2))
-					// filter empty names and empty values
+					// Filter empty names and empty values
 					.filter(([name, value]) => !!(name && value))
 					// Decode URI encoded cookie value
 					.map(([name, value]) => [name, decodeURIComponent(value)])
@@ -67,11 +67,11 @@ IncomingMessage.prototype.__defineGetter__(
  * Array containing all deleted cookies
  */
 IncomingMessage.prototype.filterCookies = function(filter = () => false) {
-	let filteredCookies = []
+	const filteredCookies = []
 	this.headers.cookie = this.cookie = (this.headers.cookie || this.cookie || '')
 		.split(/;\s*/g)
 		.filter(entry => {
-			let pass = filter(...entry.split('=', 2))
+			const pass = filter(...entry.split('=', 2))
 			if (!pass) filteredCookies.push(entry)
 			return pass
 		})
@@ -108,11 +108,9 @@ IncomingMessage.prototype.injectCookies = function(cookies) {
 				: JSON.stringify(value)
 		}
 		// Only insert new cookie if 'value' is not empty
-		if (!value)
-			throw new TypeError(`Trying to inject cookie named '${name}' with an empty value`)
+		if (!value) throw new TypeError(`Trying to inject cookie named '${name}' with an empty value`)
 		// Check illegal character ';'
-		if (/;/g.test(value))
-			throw new TypeError(`Illegal cookie value: ${value}`)
+		if (/;/g.test(value)) throw new TypeError(`Illegal cookie value: ${value}`)
 		// Add new value string
 		cookieList.push(`${name}=${encodeURIComponent(value)}`)
 	})
@@ -123,8 +121,7 @@ IncomingMessage.prototype.injectCookies = function(cookies) {
 
 IncomingMessage.prototype.injectInternalCookies = function(cookies) {
 	// Validate input
-	if (!cookies || typeof cookies !== 'object')
-		throw new TypeError('Failed to inject cookies because input is invalid', cookies)
+	if (!cookies || typeof cookies !== 'object') throw new TypeError('Failed to inject cookies because input is invalid', cookies)
 	return this.injectCookies(Object.fromEntries(
 		Object
 			.entries(cookies)

@@ -65,14 +65,14 @@ export default class Test {
 				} else {
 					pass = result === this.#expect
 				}
-				if (pass) return this.#pass('Returns as expected: ' + JSON.stringify(result))
-				else return this.#fail('Unexpected result: ' + JSON.stringify(result))
+				if (pass) return this.#pass(`Returns as expected: ${JSON.stringify(result)}`)
+				else return this.#fail(`Unexpected result: ${JSON.stringify(result)}`)
 			} catch (e) {
 				if (this.#expect.prototype && e instanceof this.#expect) {
-					return this.#pass('Throws error as expected: ' + e.stack)
+					return this.#pass(`Throws error as expected: ${e.stack}`)
 				} else {
 					if (this.endOnUncaughtError) throw e
-					return this.#fail('Unexpected error: ' + e.stack.underline)
+					return this.#fail(`Unexpected error: ${e.stack.underline}`)
 				}
 			}
 		})
@@ -133,7 +133,7 @@ export default class Test {
 	}
 	// Formatted summary
 	static formatSummary(title, summary) {
-		let maxLength = Object.keys(summary).map(el => el.length).reduce((a, b) => Math.max(a, b)),
+		const maxLength = Object.keys(summary).map(el => el.length).reduce((a, b) => Math.max(a, b)),
 			str = [
 				` Test summary for ${title}: `,
 				...Object
@@ -141,12 +141,12 @@ export default class Test {
 					.map(([name, value]) => `  - ${name.padEnd(maxLength)}: ${value.toString()} `)
 			],
 			lineWidth = Math.max(...str.map(el => el.length)) + 1,
-			[bs, be] = ['▄', '▀'].map(el => ' ' + ''.padEnd(lineWidth, el)),
+			[bs, be] = ['▄', '▀'].map(el => ` ${''.padEnd(lineWidth, el)}`),
 			color = summary.failed ? 'yellow' : 'green',
 			bgColor = summary.failed ? 'bgYellow' : 'bgGreen'
 		return [
 			bs[color],
-			...str.map(str => (' ' + str.padEnd(lineWidth).black[bgColor])),
+			...str.map(str => ` ${str.padEnd(lineWidth).black[bgColor]}`),
 			be[color],
 		].join('\n')
 	}

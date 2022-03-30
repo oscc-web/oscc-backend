@@ -18,7 +18,7 @@ export function hash(content, method = 'sha256', format = 'hex') {
 export function keyPair(key, salt = seed()) {
 	return {
 		hash: hash(mix(key, salt), 'sha256', 'hex'),
-		salt: salt
+		salt
 	}
 }
 /**

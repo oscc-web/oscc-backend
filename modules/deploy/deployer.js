@@ -19,6 +19,6 @@ export default class Deployer extends CustomObject {
 		this.#id = id
 	}
 
-	static #appData = new AppDataWithFs()
+	static #appData = new AppDataWithFs
 	static get appData() { return this.#appData }
 }

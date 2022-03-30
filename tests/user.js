@@ -3,15 +3,15 @@ import User from 'lib/user.js'
 import { seed } from 'utils/crypto.js'
 import Test from './Test.js'
 // Generate parameters for test purpose
-let userID = seed(12),
+const userID = seed(12),
 	name = 'Test User',
 	mail = 'demo@ysyx.org',
 	OAuthTokens = {},
-	groups = ['root'],
+	groups = ['root']
 	/**
 	 * @type {User}
 	 */
-	user
+let user
 new Test('create user')
 	.run(() => {
 		user = new User({ _id: userID, name, mail, OAuthTokens, groups })
@@ -60,7 +60,7 @@ new Test('change user name')
 		user.name = name
 		return await user.name
 	})
-	.expect(name = 'Test User 222')
+	.expect('Test User 222')
 
 new Test('locate user from database')
 	.run(async () => {

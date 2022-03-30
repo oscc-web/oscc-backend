@@ -42,10 +42,10 @@ new Test('delete appData')
 		return (await appData.delete({ user, appID })).acknowledged
 	})
 	.expect(true)
-let fileID = 'testFile'
+const fileID = 'testFile'
 appID = 'testFileAppID'
 user = new User({ userID: seed(12) })
-let text = 'test file string'
+const text = 'test file string'
 new Test('create AppDataWithFs')
 	.run(() => {
 		appData = new AppDataWithFs(appID)
@@ -55,7 +55,7 @@ new Test('create AppDataWithFs')
 new Test('insert a file')
 	.run(async () => {
 		fs.writeFileSync(`${PROJECT_ROOT}/tmp/${fileID}`, text)
-		return (await appData.store({ msg: 'Test file app message', cTime: new Date().getTime(), temp: true, for: 'test', fileID }, { user, appID })).acknowledged
+		return (await appData.store({ msg: 'Test file app message', cTime: (new Date).getTime(), temp: true, for: 'test', fileID }, { user, appID })).acknowledged
 	})
 	.expect(true)
 new Test('acquireFile')
@@ -75,7 +75,7 @@ new Test('deleteFile')
 	.expect(true)
 new Test('acquireFile after delete')
 	.run(async () => {
-		return (await appData.acquireFile({ user, appID }))
+		return await appData.acquireFile({ user, appID })
 	})
 	.expect(null)
 new Test('Test end')
