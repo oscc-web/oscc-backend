@@ -23,14 +23,25 @@ response = {
 	// - user him/herself
 	// - user with privilege VIEW_USER_INSTITUTION
 	// - all users, if granted by this user
-	institution: String | undefined
+	institution: String | undefined,
+	// User's description of him/herself
+	signature: String | undefined,
+	// List of groups that the target user is in,
+	// filter by group with visibility to this user
+	groups: [...{
+        // Group ID
+        id: String,
+        // Group name
+        name: String,
+    }]
+
 }
 ```
 
 ## POST  `/user/:userID/update` - `String`
 
 Update information of User &lt;userID&gt;.
-User's information can be updated only by this user and user with privilege ALTER_USER_INFO.
+User's information can be updated only by this user.
 ```js
 request = {
 	// User name
@@ -44,18 +55,47 @@ request = {
 	institution: String | undefined,
 	// User preference setting
 	setting: {
-		// USer's locale
-		language: String
-	}
+		// User's locale
+		language: String,
+		// 0 for accepting all notifications,
+		// 1 for only accepting notifications about me
+		// 2 for refusing all notifications
+		notification: 0 | 1 | 2
+	} | undefined
 }
 // The result of operation is indicated by response code.
 response = ''
 	// Demo error
 	| '[0] This is a demo error message'
 	| '[1] Privilege denied'
-	| '[2] Token not valid'
 
 ```
 
 ## GET `/user/:userID/avatar` - `Buffer`
 Returns the buffer of this user's avatar
+
+## POST `/user/:userID/updateMail`
+
+Update mail of User &lt;userID&gt;.
+User's mail can be updated only by this user.
+```js
+request = {
+	// When action is validate,
+	// password and new mail is required
+	// When action is update,
+	// new mail and token is required
+	action: 'validate' | 'update'
+	// User's password
+	password: String | undefined,
+	// User's new mail
+	mail: String,
+	// Token sent to user's new mail
+	token:String | undefined
+}
+// The result of operation is indicated by response code.
+response = ''
+	// Demo error
+	| '[0] This is a demo error message'
+	| '[1] Privilege denied'
+
+```
