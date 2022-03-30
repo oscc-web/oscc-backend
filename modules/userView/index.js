@@ -9,7 +9,7 @@ import privileged from 'lib/middleware/privileged.js'
 import errorHandler from 'utils/errorHandler.js'
 // Strategies
 import home from './strategies/home.js'
-import forumPreprocessor from './strategies/forum.js'
+import forumPreprocessor from '../../strategies/forum.js'
 // Libraries
 import Session from 'lib/session.js'
 import { PRIV } from 'lib/privileges.js'
