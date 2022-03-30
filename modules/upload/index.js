@@ -15,7 +15,7 @@ import { stat } from 'fs'
 // const storagePath = `${PROJECT_ROOT}/storage`
 logger.info('Staring upload server')
 const server = express()
-// Filter method, PUT is allowd
+// Filter method, PUT is allowed
 server.use(
 	conditional(({ method }) => method === 'PUT',
 	// Filer user not login
