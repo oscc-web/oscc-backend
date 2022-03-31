@@ -1,8 +1,5 @@
+import { CustomError } from 'lib/errors.js'
 import logger from 'lib/logger.js'
-
-function errorHandler(e) {
-	logger.error(`Uncaught error during async execution: ${e?.stack}`)
-}
 /**
  * Warp async function or promise with a fallback error handler
  * @param {import('express').Handler} fn
@@ -12,16 +9,27 @@ function errorHandler(e) {
  * @returns {Function | Promise}
  */
 export default function wrap(fn, name = fn?.name) {
+	let { handler } = CustomError
 	if (fn instanceof Promise) {
-		return fn.catch(errorHandler)
+		return fn.catch(handler)
 	}
-	return setFunctionName(async function(...args) {
-		try {
-			return await fn(...args)
-		} catch (e) {
-			errorHandler(e)
-		}
-	}, name)
+	return setFunctionName(
+		Object.assign(
+			async function(...args) {
+				try {
+					return await fn(...args)
+				} catch (e) {
+					handler(e, ...args)
+				}
+			}, {
+				use(customErrorHandler) {
+					if (typeof customErrorHandler === 'function') handler = customErrorHandler
+					else throw new TypeError
+				}
+			})
+		,
+		name
+	)
 }
 /**
  * Set name of a function to given name

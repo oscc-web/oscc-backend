@@ -3,7 +3,6 @@ import bodyParser from 'body-parser'
 import User from 'lib/user.js'
 import logger from 'lib/logger.js'
 import statusCode from 'lib/status.code.js'
-import errorHandler from 'utils/errorHandler.js'
 import Session, { SESSION_TOKEN_NAME } from 'lib/session.js'
 import { config, Rx } from 'lib/env.js'
 import { AppData } from 'lib/appData.js'
@@ -11,14 +10,18 @@ import { seed } from 'utils/crypto.js'
 import { sendMail } from '../../modules/mailer/lib.js'
 import withSession from 'lib/middleware/withSession.js'
 import wrap from 'utils/wrapAsync.js'
+import pathMatch from 'lib/middleware/pathMatch.js'
+import proxy from 'lib/middleware/proxy.js'
+import Resolved from 'utils/resolved.js'
+import { CustomError } from 'lib/errors.js'
 // AppData for current scope
 const appData = new AppData('@tmp')
 /**
  * Server instance
  */
 const server = express()
+	.use(pathMatch('/groups', proxy(new Resolved('$groups').resolver)))
 	.use(bodyParser.json({ type: req => req.method === 'POST' }))
-	.use(withSession())
 	.post('/login',
 		wrap(async (req, res, next) => {
 			const payload = req.body
@@ -47,19 +50,6 @@ const server = express()
 				logger.errAcc(`Failed login attempt for ${user}`)
 			}
 			return res.status(statusCode.ClientError.Unauthorized).end()
-		})
-	)
-	.post('/logout',
-		wrap(async (req, res, next) => {
-			const { session } = req
-			if (session instanceof Session) {
-				logger.access(`userID: <${session.userID}> logout`)
-				session.drop()
-			}
-			res
-				.cookie(SESSION_TOKEN_NAME, '', { expires: new Date(0) })
-				.status(statusCode.Success.OK)
-				.end()
 		})
 	)
 	.post('/register',
@@ -145,6 +135,20 @@ const server = express()
 			}
 		}
 	)
+	.use(withSession())
+	.post('/logout',
+		wrap(async (req, res, next) => {
+			const { session } = req
+			if (session instanceof Session) {
+				logger.access(`userID: <${session.userID}> logout`)
+				session.drop()
+			}
+			res
+				.cookie(SESSION_TOKEN_NAME, '', { expires: new Date(0) })
+				.status(statusCode.Success.OK)
+				.end()
+		})
+	)
 	.post('/user', (req, res, next) => {
 		const { session } = req
 		if (session instanceof Session) {
@@ -153,7 +157,7 @@ const server = express()
 			res.status(statusCode.ClientError.NotFound).end()
 		}
 	})
-	.use(errorHandler)
+	.use(CustomError.handler)
 // Expose handle function as default export
 export default (req, res, next) => server.handle(req, res, next)
 /**
