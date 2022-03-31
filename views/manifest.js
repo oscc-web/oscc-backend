@@ -2,6 +2,6 @@
 const res = getResolver(import.meta)
 // Process
 export default {
-	...await res.$('utilities'),
-	...await res.$('user'),
+	[res('groups')]: {},
+	...await res.$('helper')
 }

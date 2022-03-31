@@ -3,12 +3,12 @@ import express from 'express'
 import cors from 'cors'
 import bodyParser from 'body-parser'
 import logger from 'lib/logger.js'
-import errorHandler from 'utils/errorHandler.js'
 import Resolved from 'utils/resolved.js'
 import statusCode from 'lib/status.code.js'
 import { basename, dirname, resolve } from 'path'
+import { CustomError } from 'lib/errors.js'
 const path = import.meta.url.replace(/^\w+:\/\//, ''),
-	institutions = Object.freeze(
+	orgs = Object.freeze(
 		JSON.parse(readFileSync(
 			resolve(dirname(path), `${basename(path, '.js')}.json`)
 		))
@@ -24,6 +24,6 @@ const server = express()
 		})
 	// Fall through request handler
 	.use((req, res) => res.status(statusCode.ClientError.BadRequest).end())
-	.use(errorHandler)
+	.use(CustomError.handler)
 // Launch service through resolved
 Resolved.launch(server)

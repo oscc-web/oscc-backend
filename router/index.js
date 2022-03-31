@@ -6,7 +6,6 @@ import express from 'express'
 import vhost from 'lib/middleware/vhost.js'
 import proxy from 'lib/middleware/proxy.js'
 import withSession from 'lib/middleware/withSession.js'
-import errorHandler from 'utils/errorHandler.js'
 // Strategies
 import home from './strategies/home.js'
 import docs from './strategies/docs.js'
@@ -15,6 +14,7 @@ import forum from './strategies/forum.js'
 import statusCode from 'lib/status.code.js'
 import Resolved from 'utils/resolved.js'
 import { WebsocketResponse } from 'utils/wsResponse.js'
+import { CustomError } from 'lib/errors.js'
 // Compose the server
 const server = express()
 	// Remove express powered-by header
@@ -94,7 +94,7 @@ const server = express()
 		res.end()
 	})
 	// Request error handler
-	.use(errorHandler)
+	.use(CustomError.handler)
 // Launch server
 Resolved.launch(server).then(httpServer => {
 	if (httpServer) httpServer.on('upgrade', (req, socket, head) => {
