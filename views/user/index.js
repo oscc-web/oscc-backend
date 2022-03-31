@@ -1,114 +1,69 @@
 // Environmental setup
-import { resolveDistPath, config, Rx, Args } from 'lib/env.js'
+import { config, TODO } from 'lib/env.js'
+import { CustomError, InvalidOperationError } from 'lib/errors.js'
 import logger from 'lib/logger.js'
 import express from 'express'
-import { contentDir, AppDataWithFs } from 'lib/appDataWithFs.js'
-import statusCode from 'lib/status.code.js'
+// Middleware
+import vhost from 'lib/middleware/vhost.js'
+import proxy from 'lib/middleware/proxy.js'
 import withSession from 'lib/middleware/withSession.js'
-import privileged from 'lib/middleware/privileged.js'
-import conditional from 'lib/middleware/conditional.js'
+import pathMatch from 'lib/middleware/pathMatch.js'
+// Libraries and utilities
+import statusCode from 'lib/status.code.js'
 import Resolved from 'utils/resolved.js'
+import wrap from 'utils/wrapAsync.js'
 import { getUserAvatar } from './avatar.js'
 import { updateUserPassword } from './updatePassword.js'
 import { updateMail } from './updateMail.js'
 import { viewUserProfile } from './profile.js'
 import { updateUserProfile } from './profile.js'
-
 const server = express()
-	// Remove express powered-by header
-	.disable('x-powered-by')
-	// Preprocessor and access logger
-	.use((req, res, next) => {
-		logger.access(`${req.method} ${req.headers.host}${req.url} from ${req.origin}`)
-		// Filter request cookies specified by stripeCookiePrefix
-		// these cookies are likely to be used internally,
-		// and should never be passed through to application servers
-		let filteredCookies = req.filterCookies(
-			name => !Rx.internalCookie.test(name)
-		)
-		if (filteredCookies.length) logger.errAcc(
-			'Internal cookies found in request, will be removed',
-			filteredCookies
-		)
-		// Pass down the request
-		next()
-	})
-	// get :userID and push it into request
-	.use(conditional(({ url }) => {
-		if (url.startsWith('/user/')) {
-			let userID = url.match(/^(\/user\/)\w*(?=\/)/g)[0].replace('/user/', '')
-			url = url.replace(/^\/user\/(.*?)\/?/g, '')
-			return {
-				userID,
-				url: url.split(userID)[1]
+	.use(
+		withSession(
+			express.json(),
+			pathMatch(/^\/users\/?/, wrap(async (req, res) => {
+				const { pathMatch: { url }, body } = req, user = await req.session?.user
+				const [action, uid] = url.split('/', 2)
+				logger.debug(`${user} requesting ${JSON.stringify({ action, uid })}`)
+				switch (action.toLowerCase()) {
+					case '':
+						res.json(await viewUserProfile(user, uid))
+						break
+					case 'updateProfile':
+						TODO()
+						break
+					case 'updateMail':
+						(await updateMail(user, body))(res)
+						break
+					case 'updatePassword':
+						TODO()
+						break
+					case 'avatar':
+						(await getUserAvatar(uid))(res)
+						break
+					default:
+						throw new InvalidOperationError(action, { user, url })
+				}
+			}, 'groupsRequestRouter')),
+			// Uncaught request handler
+			(req, res) => {
+			// Only update statusCode if it has not been modified
+				if (res.statusCode === statusCode.Success.OK) {
+					logger.errAcc(`Unable to handle request ${req.headers.host}${req.url} from ${req.origin}`)
+					res.status(statusCode.ClientError.NotFound)
+				}
+				res.end()
 			}
-		}
-	}),
-	withSession().otherwise((req, res, next) => {
-		logger.errAcc(`Session not found (requesting ${req.headers.host}${req.url} from ${req.origin})`)
-		res.status(statusCode.ClientError.Unauthorized).end()
-	}),
-	async (req, res, next) => {
-		next()
-	})
-	// Get user's avatar
-	.use(conditional(({ url, method }) => url === '/avatar',
-		conditional(({ method }) =>
-			method === 'GET'
-		).otherwise((req, res, next) => {
-			logger.errAcc(`${req.method} not allowed (requesting ${req.headers.host}${req.url} from ${req.origin})`)
-			res.status(statusCode.ClientError.MethodNotAllowed).end()
-		}),
-		async (req, res, next) => {
-			await getUserAvatar(req, res, next)
-		})
+		).otherwise(
+			({ method, url, origin }, res) => {
+				logger.errAcc(`Rejected ${method} ${url} from ${origin}: no session found`)
+				res.status(statusCode.ClientError.Unauthorized).end()
+			}
+		)
 	)
-	// View user's profile
-	.use(conditional(({ url, method }) => url === '/',
-		conditional(({ method }) =>
-			method === 'POST'
-		).otherwise((req, res, next) => {
-			logger.errAcc(`${req.method} not allowed (requesting ${req.headers.host}${req.url} from ${req.origin})`)
-			res.status(statusCode.ClientError.MethodNotAllowed).end()
-		}),
-		async (req, res, next) => {
-			await viewUserProfile(req, res, next)
-		})
-	)
-	// Update user's mail
-	.use(conditional(({ url, method }) => url === '/updateMail',
-		conditional(({ method }) =>
-			method === 'POST'
-		).otherwise((req, res, next) => {
-			logger.errAcc(`${req.method} not allowed (requesting ${req.headers.host}${req.url} from ${req.origin})`)
-			res.status(statusCode.ClientError.MethodNotAllowed).end()
-		}),
-		async (req, res, next) => {
-			await updateMail(req, res, next)
-		})
-	)
-	// Update user's profile
-	.use(conditional(({ url, method }) => url === '/update',
-		conditional(({ method }) =>
-			method === 'POST'
-		).otherwise((req, res, next) => {
-			logger.errAcc(`${req.method} not allowed (requesting ${req.headers.host}${req.url} from ${req.origin})`)
-			res.status(statusCode.ClientError.MethodNotAllowed).end()
-		}),
-		async (req, res, next) => {
-			await updateUserProfile(req, res, next)
-		}))
-	// Update user's password
-	.use(conditional(({ url, method }) => url === '/updatePassword',
-		conditional(({ method }) =>
-			method === 'POST'
-		).otherwise((req, res, next) => {
-			logger.errAcc(`${req.method} not allowed (requesting ${req.headers.host}${req.url} from ${req.origin})`)
-			res.status(statusCode.ClientError.MethodNotAllowed).end()
-		}),
-		async (req, res, next) => {
-			await updateUserPassword(req, res, next)
-		})
-	)
+// Request error handler
+	.use(CustomError.handler)
+// Remove express powered-by header
+	.disable('x-powered-by')
 // Launch server
 Resolved.launch(server)

@@ -20,9 +20,7 @@ response = {
 	mail: String | undefined,
 	// User's institution
 	// Visible to: 
-	// - user him/herself
-	// - user with privilege VIEW_USER_INSTITUTION
-	// - all users, if granted by this user
+	// - all users
 	institution: String | undefined,
 	// User's description of him/herself
 	signature: String | undefined,
@@ -84,7 +82,7 @@ request = {
 	// password and new mail is required
 	// When action is update,
 	// new mail and token is required
-	action: 'validate' | 'update'
+	action: 'VALIDATE' | 'UPDATE'
 	// User's password
 	password: String | undefined,
 	// User's new mail
