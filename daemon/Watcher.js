@@ -16,7 +16,7 @@ export default async function watchLog(
 	 * @type {import('utils/mongo.js').MongoCollection}
 	 */
 	const log = dbInit(`${collectionName}/R`)[collectionName]
-	let d = new Date()
+	let d = new Date
 	// eslint-disable-next-line no-constant-condition
 	while (true) {
 		const result = await (await log.find({ timestamp: { $gt: d } }, { projection: { _id: 0, meta: 0 } }))

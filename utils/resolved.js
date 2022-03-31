@@ -29,10 +29,8 @@ export default class Resolved extends MessageHub {
 	 */
 	#promise
 	get promise() {
-		if (this.#blocking)
-			return this.#promise
-		else
-			return true
+		if (this.#blocking) return this.#promise
+		else return true
 	}
 	/**
 	 * @typedef {Object} ServiceDescriptor
@@ -72,8 +70,8 @@ export default class Resolved extends MessageHub {
 	}
 	/**
 	 * Create a new pending promise awaiting the resolution of
-	 * a named service 
-	 * @param {*} serviceName 
+	 * a named service
+	 * @param {*} serviceName
 	 */
 	constructor(serviceName, blocking = true) {
 		super()
@@ -94,26 +92,24 @@ export default class Resolved extends MessageHub {
 	 * Name of the service of this incoming IpcMsg
 	 */
 	/**
-	 * Check if incoming ipcMsg 
+	 * Check if incoming ipcMsg
 	 * @param {IpcMsg} ipcMsg
 	 */
 	evaluate(ipcMsg) {
 		const { service, port, ...args } = ipcMsg
 		if (service === this.#serviceName) {
-			if (!port || (typeof port !== 'number'))
-				return logger.warn(
-					`Unexpected port number <${
-						typeof port
-					}> ${
-						port
-					} during resolution of ${
-						this
-					}, ignoring this message ${
-						JSON.stringify(ipcMsg)
-					}`
-				)
-			if (!this.resolved)
-				this.#resolve(true)
+			if (!port || typeof port !== 'number') return logger.warn(
+				`Unexpected port number <${
+					typeof port
+				}> ${
+					port
+				} during resolution of ${
+					this
+				}, ignoring this message ${
+					JSON.stringify(ipcMsg)
+				}`
+			)
+			if (!this.resolved) this.#resolve(true)
 			// Record current instance descriptor
 			const current = this.toString()
 			// Create new descriptor
@@ -123,8 +119,7 @@ export default class Resolved extends MessageHub {
 			// Log the update
 			setImmediate(() => {
 				const next = this.toString()
-				if (next !== current)
-					logger.info([current, next].join(' => '))
+				if (next !== current) logger.info([current, next].join(' => '))
 			})
 		}
 	}
@@ -139,15 +134,14 @@ export default class Resolved extends MessageHub {
 	static #resolveList = []
 	/**
 	 * Register a new resolved service into the list
-	 * @param {Resolved} resolved 
+	 * @param {Resolved} resolved
 	 */
 	static push(resolved) {
 		if (!(resolved instanceof this)) throw new TypeError
 		this.#resolveList.push(resolved)
 		// Query for existing service with a delay of 1 second
 		setTimeout(() => {
-			if (!resolved.resolved)
-				this.sendMessage({ query: true, service: resolved.serviceName })
+			if (!resolved.resolved) this.sendMessage({ query: true, service: resolved.serviceName })
 		}, 1000)
 	}
 	/**
@@ -160,7 +154,7 @@ export default class Resolved extends MessageHub {
 	}
 	/**
 	 * Send an IPC broadcast to all sibling processes
-	 * @param {import('express').Express} server 
+	 * @param {import('express').Express} server
 	 * @param {String} name
 	 * @returns {Promise<import('http').Server>} port number
 	 */
@@ -173,12 +167,12 @@ export default class Resolved extends MessageHub {
 			).then(port => announcement.port = port)
 		}
 		if (cluster.isPrimary && Args.cluster) {
-			let lastUnexpectedExit = performance.now()
+			const lastUnexpectedExit = performance.now()
 			/**
 			 * @type {Worker[]}
 			 */
 			const workers = [],
-				createClusterWorker = (CLUSTER_ID) => {
+				createClusterWorker = CLUSTER_ID => {
 					const worker = forwardIPC(
 						cluster.fork({ CLUSTER_ID }),
 						PID,
@@ -235,7 +229,7 @@ export default class Resolved extends MessageHub {
 		} else {
 			// Launch server for this service
 			httpServer = server.listen(Args.port || 0, () => {
-				const port = httpServer.address().port
+				const { port } = httpServer.address()
 				resolvePort(port)
 				// Log the launched server
 				logger.info(cluster.isWorker
@@ -255,8 +249,7 @@ export default class Resolved extends MessageHub {
 			this.sendMessage(announcement)
 			// Listen for later initialized service query
 			this.addMessageHubListener(({ query, service }) => {
-				if (query && name === service)
-					this.sendMessage(announcement)
+				if (query && name === service) this.sendMessage(announcement)
 			})
 		}
 		// Wait until a port number is added to announcement

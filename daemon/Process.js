@@ -16,7 +16,7 @@ export default class Process extends CustomObject {
 	#proc
 	get proc() { return this.#proc }
 	/**
-	 * @typedef {import('utils/args.js').Arguments} ProcessAdditionalArguments 
+	 * @typedef {import('utils/args.js').Arguments} ProcessAdditionalArguments
 	 * @property {Boolean} [detached]
 	 * Indicates whether the process will be detached from current process.
 	 * This is designed to be used along with 'start', 'restart' or 'stop'
@@ -49,8 +49,7 @@ export default class Process extends CustomObject {
 			resolve(PROJECT_ROOT, this.#path),
 			__COMMAND__,
 			...Object.entries(args).map(([el, val]) => {
-				if (el && val !== undefined)
-					return `--${el.toString()}=${val.toString()}`
+				if (el && val !== undefined) return `--${el.toString()}=${val.toString()}`
 			}).filter(el => !!el)
 		], {
 			detached,
@@ -68,10 +67,8 @@ export default class Process extends CustomObject {
 				.on('exit', this.onExit(env))
 			// eslint-disable-next-line spellcheck/spell-checker
 			// Stream stdout and stderr to shared output (only in dev mode)
-			if (Args.logToConsole)
-				this.stream().transportError()
-			else
-				this.transportError()
+			if (Args.logToConsole) this.stream().transportError()
+			else this.transportError()
 		}
 	}
 	/**
@@ -108,7 +105,7 @@ export default class Process extends CustomObject {
 	 */
 	stream() {
 		const { stdout } = this.#proc
-		stdout.on('data', (chunk) => process.stdout.write(chunk.toString()))
+		stdout.on('data', chunk => process.stdout.write(chunk.toString()))
 		return this
 	}
 	/**
@@ -119,13 +116,13 @@ export default class Process extends CustomObject {
 		const { stderr } = this.#proc
 		stderr.on(
 			'data',
-			(chunk) => logger.error(`Uncaught error from ${this.#path}: ${chunk.toString().trim()}`)
+			chunk => logger.error(`Uncaught error from ${this.#path}: ${chunk.toString().trim()}`)
 		)
 		return this
 	}
 	/**
 	 * Kill this process using given signal
-	 * @param {NodeJS.Signals} signal 
+	 * @param {NodeJS.Signals} signal
 	 * @returns {Promise<Number>} exit code
 	 */
 	async kill(signal = 'SIGINT') {
@@ -173,9 +170,8 @@ export default class Process extends CustomObject {
 				.catch(e => {
 					logger.error(`Error during graceful exit: ${e.message}`)
 				})
-		}
-		// Second SIGINT received, exit anyway
-		else {
+		} else {
+			// Second SIGINT received, exit anyway
 			logger.warn('Force exiting.')
 			process.exit(1)
 		}
@@ -186,13 +182,13 @@ export default class Process extends CustomObject {
 	get [Symbol.toStringTag]() { return `${this.proc.pid} ${this.path}` }
 	// Iterator that returns [...['$id', 'proc']]
 	static get [Symbol.iterator]() {
-		return (function* () {
+		return function* () {
 			for (const { path, proc } of this.#list) {
 				logger.silly(`YIELD ${proc.constructor.name} ${path}`)
 				yield [path, proc]
 			}
 			return { done: true }
-		}).bind(this)()
+		}.bind(this)()
 	}
 }
 /**

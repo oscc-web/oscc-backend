@@ -3,7 +3,7 @@ import { Rx } from 'lib/env.js'
 
 IncomingMessage.prototype.__defineGetter__(
 	'origin',
-	function () {
+	function() {
 		const origin = undefined
 			|| this.headers['x-forwarded-for']
 			|| this.socket.remoteAddress
@@ -14,7 +14,7 @@ IncomingMessage.prototype.__defineGetter__(
 
 IncomingMessage.prototype.__defineGetter__(
 	'parsedCookies',
-	function () {
+	function() {
 		// Try to use cached result
 		if ('$parsedCookies' in this) return this.$parsedCookies
 		// Raw cookies string joined with '; '
@@ -29,7 +29,7 @@ IncomingMessage.prototype.__defineGetter__(
 					.split(/\s*;\s*/g)
 					// Split cookie name and cookie value
 					.map(str => str.split(/\s*=\s*/g, 2))
-					// filter empty names and empty values
+					// Filter empty names and empty values
 					.filter(([name, value]) => !!(name && value))
 					// Decode URI encoded cookie value
 					.map(([name, value]) => [name, decodeURIComponent(value)])
@@ -41,7 +41,7 @@ IncomingMessage.prototype.__defineGetter__(
 
 IncomingMessage.prototype.__defineGetter__(
 	'internalCookies',
-	function () {
+	function() {
 		// Try to use cached result
 		if ('$internalCookies' in this) return this.$internalCookies
 		// Parse cookies
@@ -61,17 +61,17 @@ IncomingMessage.prototype.__defineGetter__(
  * Filters the cookies of a request according to given filter
  * @param {(name: String, value: String) => Boolean} filter
  * Returns whether a cookie will remain
- * true: cookie stays in the header  
+ * true: cookie stays in the header
  * false: cookie will be deleted from request header
  * @returns {Array}
  * Array containing all deleted cookies
  */
-IncomingMessage.prototype.filterCookies = function (filter = () => false) {
-	let filteredCookies = []
+IncomingMessage.prototype.filterCookies = function(filter = () => false) {
+	const filteredCookies = []
 	this.headers.cookie = this.cookie = (this.headers.cookie || this.cookie || '')
 		.split(/;\s*/g)
 		.filter(entry => {
-			let pass = filter(...entry.split('=', 2))
+			const pass = filter(...entry.split('=', 2))
 			if (!pass) filteredCookies.push(entry)
 			return pass
 		})
@@ -83,12 +83,12 @@ IncomingMessage.prototype.filterCookies = function (filter = () => false) {
  * Inject cookies to request header according to given object
  * @param {{name: value}} filter
  * Returns whether a cookie will remain
- * true: cookie stays in the header  
+ * true: cookie stays in the header
  * false: cookie will be deleted from request header
  * @returns {undefined}
  * Array containing all deleted cookies
  */
-IncomingMessage.prototype.injectCookies = function (cookies) {
+IncomingMessage.prototype.injectCookies = function(cookies) {
 	// Clear cached $parsedCookies and $internalCookies since we altered the header
 	delete this.$internalCookies
 	delete this.$parsedCookies
@@ -108,11 +108,9 @@ IncomingMessage.prototype.injectCookies = function (cookies) {
 				: JSON.stringify(value)
 		}
 		// Only insert new cookie if 'value' is not empty
-		if (!value)
-			throw new TypeError(`Trying to inject cookie named '${name}' with an empty value`)
+		if (!value) throw new TypeError(`Trying to inject cookie named '${name}' with an empty value`)
 		// Check illegal character ';'
-		if (/;/g.test(value))
-			throw new TypeError(`Illegal cookie value: ${value}`)
+		if (/;/g.test(value)) throw new TypeError(`Illegal cookie value: ${value}`)
 		// Add new value string
 		cookieList.push(`${name}=${encodeURIComponent(value)}`)
 	})
@@ -121,10 +119,9 @@ IncomingMessage.prototype.injectCookies = function (cookies) {
 	this.cookie = this.headers.cookie = cookieList.join(';')
 }
 
-IncomingMessage.prototype.injectInternalCookies = function (cookies) {
+IncomingMessage.prototype.injectInternalCookies = function(cookies) {
 	// Validate input
-	if (!cookies || typeof cookies !== 'object')
-		throw new TypeError('Failed to inject cookies because input is invalid', cookies)
+	if (!cookies || typeof cookies !== 'object') throw new TypeError('Failed to inject cookies because input is invalid', cookies)
 	return this.injectCookies(Object.fromEntries(
 		Object
 			.entries(cookies)

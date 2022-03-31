@@ -35,32 +35,30 @@ export default function forwardIPC(proc, identifier, siblings) {
 		if ($) HUB.emit($, args)
 		// Forward to sibling and parent processes
 		// Check for ttl
-		if ($ttl === 1 && !$force)
-			return _logger_.debug(`IPC Call from ${identifier} terminated at end of ttl`)
+		if ($ttl === 1 && !$force) return _logger_.debug(`IPC Call from ${identifier} terminated at end of ttl`)
 		// Forward to child processes
 		/**
 		 * @type {[String, process][]}
 		 */
 		const iterator = siblings && siblings[Symbol.iterator] || siblings()
-		if (iterator)
-			for (const [processID, process] of iterator) {
-				_logger_.verbose(`Iterating ${process.pid} ${processID} against ${proc.pid} ${identifier}`)
-				// Exclude the sender from forward targets
-				if (process === proc) continue
-				// Check if message is designated for a certain child
-				if ($target && $target !== processID) continue
-				// Forward the message
-				try {
-					_logger_.verbose(`Forwarding IPC Call ${identifier} => ${processID}`)
-					process.send(
-						{ $, $force, $ttl: $ttl && $ttl - 1, ...args },
-						undefined, undefined,
-						e => { if (e) console.error(e?.stack) }
-					)
-				} catch (e) {
-					_logger_.error(`Error forwarding IPC message to child process <${process.path}>: ${e.stack}`)
-				}
+		if (iterator) for (const [processID, process] of iterator) {
+			_logger_.verbose(`Iterating ${process.pid} ${processID} against ${proc.pid} ${identifier}`)
+			// Exclude the sender from forward targets
+			if (process === proc) continue
+			// Check if message is designated for a certain child
+			if ($target && $target !== processID) continue
+			// Forward the message
+			try {
+				_logger_.verbose(`Forwarding IPC Call ${identifier} => ${processID}`)
+				process.send(
+					{ $, $force, $ttl: $ttl && $ttl - 1, ...args },
+					undefined, undefined,
+					e => { if (e) console.error(e?.stack) }
+				)
+			} catch (e) {
+				_logger_.error(`Error forwarding IPC message to child process <${process.path}>: ${e.stack}`)
 			}
+		}
 		// Check if there is a parent process (that is different from proc)
 		if (process.send && process !== proc) {
 			// Try forward the message to the upstream
@@ -88,7 +86,7 @@ export class MessageHub extends CustomObject {
 		super()
 		// Add default listener for message targeted for the class
 		this.constructor.addMessageHubListener(this.onMessage.bind(this))
-		// get [Symbol.toStringTag]() may access child class's private variables,
+		// Get [Symbol.toStringTag]() may access child class's private variables,
 		// which is not yet initialized at this moment
 		setImmediate(() => _logger_.debug(`${this} setup to track ${this.constructor.name} at MessageHub`))
 	}
@@ -96,7 +94,7 @@ export class MessageHub extends CustomObject {
 	sendMessage(...args) { return this.constructor.sendMessage(...args) }
 	/**
 	 * The default message interceptor, should be re-implemented in child classes
-	 * @param {Object} message 
+	 * @param {Object} message
 	 */
 	onMessage(message) {
 		_logger_.warn(`Got message for ${this.constructor.name} without a handler: ${JSON.stringify(message)}`)
@@ -164,8 +162,7 @@ export class ProcessTree extends MessageHub {
 		this.sendRelay(true)
 	}
 	sendRelay(resetTimeout = false) {
-		if (process.send)
-			this.sendMessage({ [this.#PID]: this.treeSegment }, { $ttl: 1 })
+		if (process.send) this.sendMessage({ [this.#PID]: this.treeSegment }, { $ttl: 1 })
 		if (resetTimeout || this.timeout) {
 			try {
 				this.timeout && clearTimeout(this.timeout)

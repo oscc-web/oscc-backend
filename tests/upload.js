@@ -5,16 +5,16 @@ import fs from 'fs-extra'
 import http from 'http'
 import FormData from 'form-data'
 init(import.meta)
-let db = await dbInit('upload/crud')
+const db = await dbInit('upload/crud')
 const TIME_OUT = 2000
-let options = {
+const options = {
 	'method': 'GET',
 	'hostname': '127.0.0.1',
 	'port': 9997,
 	'path': '/?for=resume'
 }
 const readStream = fs.createReadStream(`${PROJECT_ROOT}/README.md`)
-let form = new FormData()
+let form = new FormData
 form.append('fileUpLoad', readStream)
 console.log('Test: fetch upload response code is 403, returns as expected'.green)
 let req = http.request(options, res =>
@@ -22,9 +22,7 @@ let req = http.request(options, res =>
 )
 req.end()
 await new Promise(res => setTimeout(() => res(), TIME_OUT))
-options.headers = {
-	'Cookie': '__internal_user_info={"id":123,"name":"wxl"}',
-}
+options.headers = { 'Cookie': '__internal_user_info={"id":123,"name":"wxl"}', }
 console.log('Test: fetch upload response code is 405, returns as expected'.green)
 req = http.request(options, res =>
 	console.log(res.statusCode.toString().blue)
@@ -38,10 +36,10 @@ options.headers.Cookie = '__internal_user_info={"id":123,"name":"wxl"}'
 let rawData = ''
 req = http.request(options, res => {
 	console.log(res.statusCode.toString().blue)
-	res.on('data', (chunk) => { rawData += chunk })
+	res.on('data', chunk => { rawData += chunk })
 	res.on('end', async () => {
 		try {
-			// const parsedData = JSON.parse(rawData);
+			// Const parsedData = JSON.parse(rawData);
 			console.log('Test: find file in db'.green)
 			console.log(JSON.stringify((await db.upload.find({ _id: rawData }).toArray())[0]).blue)
 			console.log('Test: find file in fs'.green)
@@ -60,13 +58,13 @@ console.log('Test: can not find file in fs after expire time'.green)
 console.log(fs.existsSync(`${PROJECT_ROOT}/tmp/${rawData}`))
 
 await new Promise(res => setTimeout(() => res(), TIME_OUT))
-form = new FormData()
+form = new FormData
 form.append('fileUpLoad', fs.createReadStream(`${PROJECT_ROOT}/README.md`))
 options.headers = form.getHeaders()
 options.headers.Cookie = '__internal_user_info={"id":123,"name":"wxl"}'
 let str = ''
-let req2 = http.request(options, res => {
-	res.on('data', (chunk) => { str += chunk })
+const req2 = http.request(options, res => {
+	res.on('data', chunk => { str += chunk })
 })
 form.pipe(req2)
 
@@ -89,7 +87,7 @@ console.log('Test: fetch upload response code is 200, returns as expected'.green
 await new Promise(res => setTimeout(() => res(), TIME_OUT))
 req = http.request(options, res => {
 	console.log(res.statusCode.toString().blue)
-	// res.on('data', (chunk) => { rawData += chunk; });
+	// Res.on('data', (chunk) => { rawData += chunk; });
 })
 req.write(JSON.stringify({
 	'fileID': str,

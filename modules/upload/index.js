@@ -11,44 +11,44 @@ import Resolved from 'utils/resolved.js'
 import fileTransport from 'lib/middleware/fileTransport.js'
 import { upload as manifest } from './manifest.js'
 import { stat } from 'fs'
-// temp storage path
+// Temp storage path
 // const storagePath = `${PROJECT_ROOT}/storage`
 logger.info('Staring upload server')
 const server = express()
-// filter method, PUT is allowd
+// Filter method, PUT is allowed
 server.use(
 	conditional(({ method }) => method === 'PUT',
-	// filer user not login
+	// Filer user not login
 		withSession(
-			// filter user does not have privilege to upload
+			// Filter user does not have privilege to upload
 			// TODO privileged(
 			// ,
 			// create servers for each path in manifest
 			...Object.entries(await manifest()).map(([path, { hook = (req, res, next) => next(), ...conf }]) => conditional(
-				// send request to correct server according to url
+				// Send request to correct server according to url
 				({ url }) => url.toLowerCase() == path.toLowerCase(),
-				// store file in fs
+				// Store file in fs
 				fileTransport(contentDir, conf),
 				async (req, res, next) => {
 					const { session, url, fileID, filePath, fileSize } = req
-					// store file info into database
+					// Store file info into database
 					await AppDataWithFs.registerFileUpload(fileID, session.userID, url, {
 						fileSize,
 						filePath,
 						// ... (req.headers || {}),
-						...{ type:req.headers?.['content-type'] },
-						// fs.stat
-						... await new Promise((resolve, reject) => stat(filePath, (err, stats) => {
+						...{ type: req.headers?.['content-type'] },
+						// Fs.stat
+						...await new Promise((resolve, reject) => stat(filePath, (err, stats) => {
 							if (err) reject(err)
 							else resolve(stats)
 						}))
 					},
-					// store args
+					// Store args
 					conf),
 					await hook(req, res, () =>
 						res.status(statusCode.Success.OK).end(fileID)
 					)
-				} 
+				}
 			)),
 			function uploadErrorHandler(err, req, res, next) {
 				logger.errAcc(err.stack)
@@ -69,7 +69,7 @@ server.use(
 	})
 )
 Resolved.launch(server)
-// scheduled deletion
+// Scheduled deletion
 // const expireTime = config.upload.expireTime //milliseconds
 // const job = new CronJob(config.upload.cron, () => {
 // 	let now = new Date().getTime()

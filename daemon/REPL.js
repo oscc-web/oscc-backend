@@ -20,10 +20,20 @@ import * as daemon from '../index.js'
 const prompt = ['ysyx'.yellow, '>'.dim, ''].join(' ')
 // REPL Readonly Context
 const context = {
-	PRIV, PRIV_LUT, daemon,
-	Session, User, Group, AppData, AppDataWithFs, consoleTransport, Process,
+	PRIV,
+	PRIV_LUT,
+	daemon,
+	Session,
+	User,
+	Group,
+	AppData,
+	AppDataWithFs,
+	consoleTransport,
+	Process,
 	db: dbInit('user/CRUD', 'session/CRUD', 'groups/CRUD', 'appData/CRUD', 'log/CRUD'),
-	hash, wrap, setFunctionName
+	hash,
+	wrap,
+	setFunctionName
 }
 // Create REPL instance
 const rp = repl
@@ -35,7 +45,7 @@ const rp = repl
 		replMode: REPL_MODE_SLOPPY,
 	})
 	.on('exit', () => process.exit(0))
-	.on('reset', async (ctx) => {
+	.on('reset', async ctx => {
 		rp.pause()
 		rp.clearBufferedCommand()
 		await new Promise(r => process.stdout.cursorTo(0, 0, r))
@@ -60,24 +70,21 @@ function initialize(ctx){
 		.entries(context)
 		.forEach(([name, value]) => {
 			// if (typeof value === 'object') value = Object.freeze(value)
-			if (typeof value === 'function' && value.length)
-				Object.defineProperty(ctx, name, {
-					configurable: false,
-					enumerable: true,
-					value
-				})
-			else if (typeof value === 'function')
-				Object.defineProperty(ctx, name, {
-					configurable: false,
-					enumerable: true,
-					get: () => (value.bind(rp)(), undefined),
-				})
-			else
-				Object.defineProperty(ctx, name, {
-					configurable: false,
-					enumerable: true,
-					value,
-				})
+			if (typeof value === 'function' && value.length) Object.defineProperty(ctx, name, {
+				configurable: false,
+				enumerable: true,
+				value
+			})
+			else if (typeof value === 'function') Object.defineProperty(ctx, name, {
+				configurable: false,
+				enumerable: true,
+				get: () => (value.bind(rp)(), undefined),
+			})
+			else Object.defineProperty(ctx, name, {
+				configurable: false,
+				enumerable: true,
+				value,
+			})
 		})
 }
 initialize(rp.context)
@@ -92,17 +99,15 @@ initialize(rp.context)
  */
 let pending = undefined
 /**
- * @param {Boolean} resume 
+ * @param {Boolean} resume
  * @returns {PendingState}
  */
 async function getConsoleLock(resume = false) {
 	// Take over write privilege if trying to resume
-	if (pending?.resume)
-		// eslint-disable-next-line no-empty
-		try { pending.res(false) } catch (e) {}
-	else
-		// Wait for previous task to finish
-		await pending?.promise
+	// eslint-disable-next-line no-empty
+	if (pending?.resume) try { pending.res(false) } catch (e) {}
+	// Wait for previous task to finish
+	else await pending?.promise
 	// Create new pending task
 	let res, promise = new Promise(r => res = r)
 	return pending = { res, promise, resume }
@@ -110,12 +115,12 @@ async function getConsoleLock(resume = false) {
 // Take over console's std-out
 const logProxy = new class LogProxy extends Writable {
 	/**
-	 * @param {Buffer | String} chunk 
-	 * @param  {...any} args 
+	 * @param {Buffer | String} chunk
+	 * @param  {...any} args
 	 */
 	async write(chunk, ...args) {
 		const { stdout } = process
-		let { res } = await getConsoleLock(false)
+		const { res } = await getConsoleLock(false)
 		// Pause REPL
 		rp.pause()
 		// // Move cursor to the start of current REPL code block
@@ -134,7 +139,7 @@ const logProxy = new class LogProxy extends Writable {
 		try { res(true) } catch (e) {}
 		// Delayed resolution for resumption
 		if (chunk.endsWith('\n')) {
-			let { res, promise } = await getConsoleLock(true)
+			const { res, promise } = await getConsoleLock(true)
 			// Only resume REPL execution upon creation of new line
 			promise.then(resume => {
 				// Resume REPL execution
@@ -156,7 +161,7 @@ for (const cmd of ['start', 'stop', 'restart', 'run']) {
 			this.pause()
 			this.clearBufferedCommand()
 			const node_flags = []
-			const user_args = args.replace(/(^|\s)[:@][\w_-]*/gi, (str) => {
+			const user_args = args.replace(/(^|\s)[:@][\w_-]*/gi, str => {
 				node_flags.push(
 					str
 						.trim()
@@ -166,12 +171,14 @@ for (const cmd of ['start', 'stop', 'restart', 'run']) {
 				return ''
 			})
 			// Assembly final arguments
-			const $ = ['node', [
-				...node_flags,
-				PROJECT_ROOT,
-				cmd,
-				user_args
-			]]
+			const $ = [
+				'node', [
+					...node_flags,
+					PROJECT_ROOT,
+					cmd,
+					user_args
+				]
+			]
 			// Log the actual command used to spawn the process
 			console.log($.flat(Infinity).join(' '))
 			// Spawn the process

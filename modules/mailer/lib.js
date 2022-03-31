@@ -3,16 +3,16 @@ import { extractIdentityFromURL } from 'lib/env.js'
 import statusCode from 'lib/status.code.js'
 import Resolved from 'utils/resolved.js'
 // Create a pending service resolution
-const resolver = new Resolved(extractIdentityFromURL(import.meta.url), false).resolver
+const { resolver } = new Resolved(extractIdentityFromURL(import.meta.url), false)
 /**
  * @typedef {('validateMail' | 'XXX')} mailTemplate
  */
 
 /**
  * Send email to specified address using certain template
- * @param {String} address 
- * @param {mailTemplate} template 
- * @param {Object} args 
+ * @param {String} address
+ * @param {mailTemplate} template
+ * @param {Object} args
  */
 export async function sendMail(address, template, args) {
 	const target = await resolver()
@@ -24,8 +24,7 @@ export async function sendMail(address, template, args) {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' }
 			}, res => {
-				if (res.statusCode === statusCode.Success.OK)
-					resolve()
+				if (res.statusCode === statusCode.Success.OK) resolve()
 				else {
 					let message = ''
 					res.on('data', chunk => message += chunk)

@@ -25,7 +25,7 @@ const server = express()
 		// Filter request cookies specified by stripeCookiePrefix
 		// these cookies are likely to be used internally,
 		// and should never be passed through to application servers
-		let filteredCookies = req.filterCookies(
+		const filteredCookies = req.filterCookies(
 			name => !Rx.internalCookie.test(name)
 		)
 		if (filteredCookies.length) logger.errAcc(
@@ -41,7 +41,7 @@ const server = express()
 		// Routing strategy
 		home,
 		// Static server can be either a static dist or vite dev server
-		(Args.useDevProxy)
+		Args.useDevProxy
 			// Forward traffic to vite dev server
 			? (() => {
 				logger.info(`YSYX.ORG redirected to development port [${config.devProxy['@']}]`)

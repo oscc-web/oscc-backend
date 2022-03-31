@@ -1,7 +1,7 @@
 import dbInit from 'utils/mongo.js'
 import Test from './Test.js'
 let db
-let id = Date.now().toString(36)
+const id = Date.now().toString(36)
 
 new Test('create connection with C/R access')
 	.run(async () => {
@@ -38,11 +38,7 @@ new Test('first, update entry with updated: <DateString>')
 	.run(async () => {
 		return await db.test.update(
 			{ _id: id },
-			{
-				$set: {
-					updated: (new Date).toISOString()
-				}
-			})
+			{ $set: { updated: (new Date).toISOString() } })
 	})
 	.expect(({ acknowledged, modifiedCount }) => acknowledged && modifiedCount)
 

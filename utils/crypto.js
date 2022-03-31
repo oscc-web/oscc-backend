@@ -13,19 +13,19 @@ export function hash(content, method = 'sha256', format = 'hex') {
  * Returns a pair of salted password string and its salt.
  * @param {string} key
  * @param {string} salt
- * @returns {object} keyPair 
+ * @returns {object} keyPair
  */
 export function keyPair(key, salt = seed()) {
 	return {
 		hash: hash(mix(key, salt), 'sha256', 'hex'),
-		salt: salt
+		salt
 	}
 }
 /**
  * Tests if a given key matches the key pair.
- * @param {object} keyPair 
- * @param {string} key 
- * @returns 
+ * @param {object} keyPair
+ * @param {string} key
+ * @returns
  */
 export function testKey(keyPair, key) {
 	if (!keyPair || typeof keyPair !== 'object') return false
@@ -37,7 +37,7 @@ export function testKey(keyPair, key) {
  * Returns a pair of salted password string and its salt.
  * @param {string} password
  * @param {string} salt
- * @returns {object} keyPair 
+ * @returns {object} keyPair
  */
 export function mix(password, salt = '') {
 	salt = salt.split('').reverse()

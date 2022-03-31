@@ -39,7 +39,7 @@ export default class Tree {
 	}
 	/**
 	 * Width of serialized chunk
-	 * @type {Number} width 
+	 * @type {Number} width
 	 */
 	get width() {
 		return this.keys.reduce((m, s) => Math.max(m, noColor(s).length), 0)
@@ -51,8 +51,7 @@ export default class Tree {
 	 * @returns {[String[], Number[]]}
 	 */
 	serialize(width = this.width, ...widths) {
-		if (this.isEdgeNode)
-			return [[pad(scheme.value(this.#data), width)], [0]]
+		if (this.isEdgeNode) return [[pad(scheme.value(this.#data), width)], [0]]
 		else {
 			const lines = [], joints = []
 			for (const [nodeName, subTree] of this.entries) {
@@ -63,18 +62,15 @@ export default class Tree {
 							j.length > 1
 								? j.map((n, i) => {
 									const t = n == titleLine
-									if (i == 0)
-										return [n, t ? '─┬─╴' : ' ┌─╴']
-									else if (i + 1 >= j.length)
-										return [n, t ? '─┴─╴' : ' └─╴']
-									else
-										return [n, t ? '─┼─╴' : ' ├─╴']
+									if (i == 0) return [n, t ? '─┬─╴' : ' ┌─╴']
+									else if (i + 1 >= j.length) return [n, t ? '─┴─╴' : ' └─╴']
+									else return [n, t ? '─┼─╴' : ' ├─╴']
 								})
 								: [[j[0], '───╴']]
 						)
 					lines.push(...l.map((line, i) => {
 						const joint = jMap[i] || (
-							(i < Math.min(...j) || i > Math.max(...j))
+							i < Math.min(...j) || i > Math.max(...j)
 								? '    '
 								: undefined
 						)
@@ -106,7 +102,7 @@ export default class Tree {
 	 */
 	normalize() {
 		const widths = [this.width]
-		let children = this.children
+		let { children } = this
 		while (children.length) {
 			widths.push(Math.max(...children.map(({ width }) => width)))
 			children = children.map(t => t.children).flat()
@@ -114,7 +110,7 @@ export default class Tree {
 		return widths
 	}
 	/**
-	 * @param {Object | Serializable} data 
+	 * @param {Object | Serializable} data
 	 */
 	constructor(data) {
 		if (data && { object: 1, function: 1 }[typeof data]) {
