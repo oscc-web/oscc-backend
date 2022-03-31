@@ -36,7 +36,7 @@ const server = express()
 	// get :userID and push it into request
 	.use(conditional(({ url }) => {
 		if (url.startsWith('/user/')) {
-			let userID = ((url.match(/^(\/user\/)\w*(?=\/)/g))[0]).replace('/user/', '')
+			let userID = url.match(/^(\/user\/)\w*(?=\/)/g)[0].replace('/user/', '')
 			url = url.replace(/^\/user\/(.*?)\/?/g, '')
 			return {
 				userID,
