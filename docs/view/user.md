@@ -4,7 +4,7 @@
 > + POST `/user/:userID[/*]`
 > + GET `/user/:userID/avatar`
 
-## POST  `/user/:userID` - `JSON`
+## POST  `/user/:userID/` - `JSON`
 
 Returns information of User &lt;userID&gt;.
 The information may vary according to current user's privilege and identity. Only relative and privileged information would be visible.
@@ -84,6 +84,24 @@ request = {
 	mail: String,
 	// Token sent to user's new mail
 	token:String | undefined
+}
+// The result of operation is indicated by response code.
+response = ''
+	// Demo error
+	| '[0] This is a demo error message'
+	| '[1] Privilege denied'
+
+```
+## POST `/user/:userID/updatePassword`
+
+Update password of User &lt;userID&gt;.
+User's password can be updated only by this user.
+```js
+request = {
+	// User's password before updating
+	oldPassword,
+	// User's password after updating
+	newPassword
 }
 // The result of operation is indicated by response code.
 response = ''
