@@ -16,7 +16,8 @@ const server = express()
 			express.json(),
 			pathMatch(/^\/users\/?/, wrap(async (req, res) => {
 				const { pathMatch: { url }, body } = req, user = await req.session?.user
-				const [uid, action] = url.split('/', 2)
+				let [uid, action] = url.split('/', 2)
+				action = action || ''
 				logger.debug(`${user} requesting ${JSON.stringify({ action, uid })}`)
 				switch (action.toLowerCase()) {
 					case '':
