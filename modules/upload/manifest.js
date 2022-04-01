@@ -1,29 +1,51 @@
-
 export async function upload() {
-	const { AppDataWithFs } = await import('lib/appDataWithFs.js')
-	const { PRIV } = await import('lib/privileges.js')
-	const userProfile = new AppDataWithFs('user-profile')
+	const
+		{ AppDataWithFs } = await import('lib/appDataWithFs.js'),
+		{ FileDescriptor } = await import('lib/fileDescriptor.js'),
+		{ PRIV } = await import('lib/privileges.js'),
+		userProfile = new AppDataWithFs('user-profile')
 	return {
 		'/avatar': {
 			duplicate: false,
 			replace: true,
-			/**
-			 *
-			 * @param {import('express').Request} req
-			 * @param {import('express').Response} res
-			 * @param {Function} next
-			 */
+			// Size limit: 2MB
+			maxSize: 2048 * 1024,
+			contentType: /^image\/\w+$/gi,
 			async hook(req, res, next) {
-				const { session, url } = req,
-					contentType = req.headers?.['content-type']
-				let acquireResult
-				// Check contentType is image
-				if (contentType && contentType.trim().startsWith('image')) {
-					acquireResult = await userProfile.acquireFile({ userID: session.userID, url }, { replace: true })
-				}
+				const { session: { userID }, url } = req
+				await userProfile.acquireFile(
+					{ userID, url },
+					{ replace: true }
+				)
 				await next()
 			}
 		},
-		'/resume': { privilege: PRIV.ALTER_GROUP_PRIVILEGES }
+		'/resume': {
+			duplicate: false,
+			replace: true,
+			// Size limit: 5MB
+			maxSize: 5120 * 1024,
+			contentType: /^application\/pdf$/gi,
+			async hook(req, res, next) {
+				const { session: { userID }, url } = req
+				await userProfile.acquireFile(
+					{ userID, url },
+					{ replace: true }
+				)
+				await next()
+			}
+		},
+		'/deploy': {
+			duplicate: false,
+			replace: true,
+			// Size limit: 5MB
+			maxSize: 5120 * 1024,
+			contentType: /^application\/pdf$/gi,
+			async hook(req, res, next) {
+				const { session, pathMatch: { url } } = req, user = await session
+				// TODO: Transfer file to deployer
+				await next()
+			}
+		}
 	}
 }
