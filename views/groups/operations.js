@@ -57,11 +57,12 @@ export async function update({ id, ...groupDsc }, user) {
 		`update ${group}`, { user }
 	)
 	// Strip privileges if updating root group
-	if (!(group instanceof RootSystemGroup)) delete groupDsc.privileges
+	if (group instanceof RootSystemGroup) delete groupDsc.privileges
 	// Check if user has privileges specified in groupDsc.privileges
 	if (!Group.challenge(groupDsc, user)) throw new PrivilegeError(
 		`alter ${group}'s privileges to ${groupDsc.privileges.join(', ')}`, { user }
 	)
+	logger.debug(JSON.stringify({ $set: groupDsc }))
 	await group.update({ $set: groupDsc })
 	return successful
 }
