@@ -17,10 +17,6 @@ import getGroupsList from './get-list.js'
 import { create, remove, update } from './operations.js'
 // Compose the server
 const server = express()
-	.use((req, res, next) => {
-		console.log(req.origin, req.url)
-		next()
-	})
 	.use(
 		withSession(
 			express.json(),
