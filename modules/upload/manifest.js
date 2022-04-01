@@ -7,6 +7,7 @@ export async function upload() {
 		'/avatar': {
 			duplicate: false,
 			replace: true,
+			maxSize: 2048 * 1024,
 			/**
 			 *
 			 * @param {import('express').Request} req
