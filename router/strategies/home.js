@@ -20,7 +20,13 @@ const appData = new AppData('@tmp')
  * Server instance
  */
 const server = express()
-	.use(pathMatch('/groups', proxy(new Resolved('$groups').resolver)))
+	.use(pathMatch('/groups',
+		(req, res, next) => {
+			req.url = req.pathMatch.url || '/'
+			next()
+		},
+		proxy(new Resolved('$groups').resolver))
+	)
 	.use(bodyParser.json({ type: req => req.method === 'POST' }))
 	.post('/login',
 		wrap(async (req, res, next) => {
