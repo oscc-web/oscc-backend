@@ -36,7 +36,7 @@ response = {
 }
 ```
 
-## POST  `/user/:userID/update` - `String`
+## POST  `/user/:userID/updateProfile` - `String`
 
 Update information of User &lt;userID&gt;.
 User's information can be updated only by this user.
@@ -44,11 +44,6 @@ User's information can be updated only by this user.
 request = {
 	// User name
 	name: String | undefined,
-	// When updating mail, both token and mail must be provided
-	// User's email (verified), 
-	mail: String | undefined,
-	// Token sent to user's email
-	token: String | undefined,
 	// User's institution
 	institution: String | undefined,
 	// User preference setting

@@ -1,50 +1,43 @@
 // Environmental setup
-import { config, TODO } from 'lib/env.js'
 import { CustomError, InvalidOperationError } from 'lib/errors.js'
 import logger from 'lib/logger.js'
 import express from 'express'
 // Middleware
-import vhost from 'lib/middleware/vhost.js'
-import proxy from 'lib/middleware/proxy.js'
 import withSession from 'lib/middleware/withSession.js'
 import pathMatch from 'lib/middleware/pathMatch.js'
 // Libraries and utilities
 import statusCode from 'lib/status.code.js'
 import Resolved from 'utils/resolved.js'
 import wrap from 'utils/wrapAsync.js'
-import { getUserAvatar } from './avatar.js'
-import { updateUserPassword } from './updatePassword.js'
-import { updateMail } from './updateMail.js'
-import { viewUserProfile } from './profile.js'
-import { updateUserProfile } from './profile.js'
+import { viewUserProfile, updateMail, getUserAvatar, updateUserPassword, updateUserProfile } from './operation.js'
 const server = express()
 	.use(
 		withSession(
 			express.json(),
 			pathMatch(/^\/users\/?/, wrap(async (req, res) => {
 				const { pathMatch: { url }, body } = req, user = await req.session?.user
-				const [action, uid] = url.split('/', 2)
+				const [uid, action] = url.split('/', 2)
 				logger.debug(`${user} requesting ${JSON.stringify({ action, uid })}`)
 				switch (action.toLowerCase()) {
 					case '':
 						res.json(await viewUserProfile(user, uid))
 						break
-					case 'updateProfile':
-						TODO()
+					case 'updateprofile':
+						(await updateUserProfile(uid, body, user))(res)
 						break
-					case 'updateMail':
+					case 'updatemail':
 						(await updateMail(user, body))(res)
 						break
-					case 'updatePassword':
-						TODO()
+					case 'updatepassword':
+						(await updateUserPassword(uid, body, user))(res)
 						break
 					case 'avatar':
-						(await getUserAvatar(uid))(res)
+						await getUserAvatar(uid, user, res)
 						break
 					default:
 						throw new InvalidOperationError(action, { user, url })
 				}
-			}, 'groupsRequestRouter')),
+			}, 'userRequestRouter')),
 			// Uncaught request handler
 			(req, res) => {
 			// Only update statusCode if it has not been modified
