@@ -238,7 +238,7 @@ export default class Resolved extends MessageHub {
 				)
 			})
 			process.on('SIGINT', () => {
-				server.close(() => {
+				httpServer.close(() => {
 					process.exit(0)
 				})
 			})

@@ -82,7 +82,7 @@ const args = {
 			if (arg) Error.stackTraceLimit = arg
 			return { stackTraceLimit: arg }
 		},
-		async kill(arg = 'ysyx\\.(local|org|dev|cc)') {
+		async kill(arg = 'ysyx\\.?(local|org|dev|cc)?') {
 			const cmd = `kill $(ps aux | egrep -i "${arg.toUpperCase()}" | grep -v egrep | awk "{print $2}")`
 			console.log(cmd)
 			exec(cmd)
