@@ -20,36 +20,26 @@ const server = express()
 	.use(
 		withSession(
 			express.json(),
-			pathMatch(/^\/groups\/?/, wrap(async (req, res) => {
-				const { pathMatch: { url }, body } = req, user = await req.session?.user
-				const [action, gid] = url.split('/', 2)
-				logger.debug(`${user} requesting ${JSON.stringify({ action, gid })}`)
-				switch (action.toLowerCase()) {
-					case '':
+			wrap(async (req, res) => {
+				const { url, body } = req, user = await req.session?.user
+				logger.debug(`${user} requesting ${JSON.stringify({ url, body })}`)
+				switch (url.toLowerCase()) {
+					case '/':
 						res.json(await getGroupsList(user))
 						break
-					case 'create':
-						(await create(gid, body, user))(res)
+					case '/create':
+						(await create(body, user))(res)
 						break
-					case 'update':
-						(await update(gid, body, user))(res)
+					case '/update':
+						(await update(body, user))(res)
 						break
-					case 'remove':
-						(await remove(gid, user))(res)
+					case '/remove':
+						(await remove(body, user))(res)
 						break
 					default:
-						throw new InvalidOperationError(action, { user, url })
+						throw new InvalidOperationError(url, { user })
 				}
-			}, 'groupsRequestRouter')),
-			// Uncaught request handler
-			(req, res) => {
-				// Only update statusCode if it has not been modified
-				if (res.statusCode === statusCode.Success.OK) {
-					logger.errAcc(`Unable to handle request ${req.headers.host}${req.url} from ${req.origin}`)
-					res.status(statusCode.ClientError.NotFound)
-				}
-				res.end()
-			}
+			}, 'groupsRequestRouter')
 		).otherwise(
 			({ method, url, origin }, res) => {
 				logger.errAcc(`Rejected ${method} ${url} from ${origin}: no session found`)
