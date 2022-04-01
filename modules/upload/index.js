@@ -1,5 +1,4 @@
 // Environmental setup
-import { config, PID, PROJECT_ROOT } from 'lib/env.js'
 import logger from 'lib/logger.js'
 import express from 'express'
 import { contentDir, AppDataWithFs } from 'lib/appDataWithFs.js'
@@ -11,6 +10,7 @@ import pathMatch from 'lib/middleware/pathMatch.js'
 import statusCode from 'lib/status.code.js'
 import { CustomError } from 'lib/errors.js'
 import Resolved from 'utils/resolved.js'
+import wrap from 'utils/wrapAsync.js'
 import { upload as manifest } from './manifest.js'
 import { stat } from 'fs'
 // Temp storage path
@@ -34,41 +34,46 @@ const server = express()
 						duplicate = false,
 						replace = false,
 						// FileTransport configurations
+						contentType,
 						maxSize,
 						checkID,
+						// Privilege control configurations
+						privileges = [],
 						// Additional configurations
 						...conf
 					}
 				]) => pathMatch(
 				// Send request to correct server according to url
 					path,
-					// Store file in fs
-					fileTransport(contentDir, { maxSize, checkID, ...conf }),
-					async (req, res, next) => {
-						const { session, url, fileID, filePath, fileSize } = req
-						// Store file info into database
-						await AppDataWithFs.registerFileUpload(
-							fileID,
-							session.userID,
-							url,
-							{
-								fileSize,
-								filePath,
-								// ... (req.headers || {}),
-								...{ type: req.headers?.['content-type'] },
-								// Fs.stat
-								...await new Promise((resolve, reject) => stat(filePath, (err, stats) => {
-									if (err) reject(err)
-									else resolve(stats)
-								}))
-							},
-							// Store args
-							{ duplicate, replace, ...conf }
-						),
-						await hook(req, res, () =>
-							res.status(statusCode.Success.Created).end(fileID)
-						)
-					}
+					privileged(privileges,
+					// Transport request body into local file system
+						fileTransport(contentDir, { contentType, maxSize, checkID, ...conf }),
+						wrap(async (req, res, next) => {
+							const { session, url, fileID, filePath, fileSize } = req
+							// Store file info into database
+							await AppDataWithFs.registerFileUpload(
+								fileID,
+								session.userID,
+								url,
+								{
+									fileSize,
+									filePath,
+									// ... (req.headers || {}),
+									...{ type: req.headers?.['content-type'] },
+									// Fs.stat
+									...await new Promise((resolve, reject) => stat(filePath, (err, stats) => {
+										if (err) reject(err)
+										else resolve(stats)
+									}))
+								},
+								// Store args
+								{ duplicate, replace, ...conf }
+							),
+							await hook(req, res, () =>
+								res.status(statusCode.Success.Created).end(fileID)
+							)
+						})
+					)
 				))
 			).otherwise((req, res, next) => {
 				res.status(statusCode.ClientError.Unauthorized).end()
