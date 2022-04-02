@@ -179,7 +179,7 @@ export async function updateUserPassword(userID, body, user) {
 		)
 	} else {
 		throw new PrivilegeError(
-			`update User<${userID}>'s profile`,
+			`update User <${userID}>'s profile`,
 			{ user }
 		)
 	}

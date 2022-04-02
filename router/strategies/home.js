@@ -8,8 +8,9 @@ import { config, Rx } from 'lib/env.js'
 import { AppData } from 'lib/appData.js'
 import { seed } from 'utils/crypto.js'
 import { sendMail } from '../../modules/mailer/lib.js'
-import withSession from 'lib/middleware/withSession.js'
 import wrap from 'utils/wrapAsync.js'
+import withSession from 'lib/middleware/withSession.js'
+import conditional from 'lib/middleware/conditional.js'
 import pathMatch from 'lib/middleware/pathMatch.js'
 import proxy from 'lib/middleware/proxy.js'
 import Resolved from 'utils/resolved.js'
@@ -20,6 +21,7 @@ const appData = new AppData('@tmp')
  * Server instance
  */
 const server = express()
+	// Groups View
 	.use(pathMatch('/groups',
 		(req, res, next) => {
 			req.url = req.pathMatch.url || '/'
@@ -27,7 +29,16 @@ const server = express()
 		},
 		proxy(new Resolved('$groups').resolver))
 	)
-	.use(pathMatch('/user', proxy(new Resolved('$user').resolver)))
+	// User View
+	.use(conditional(
+		({ method, url }) => {
+			const [prefix, userID, action, ...segments] = url.split('/').splice(1)
+			if (prefix !== 'user' || !userID) return
+			if (method !== 'POST' && action !== 'avatar') return
+			return { url: ['', userID, action, ...segments].join('/') }
+		},
+		proxy(new Resolved('$user').resolver)
+	))
 	.use(bodyParser.json({ type: req => req.method === 'POST' }))
 	.post('/login',
 		wrap(async (req, res, next) => {

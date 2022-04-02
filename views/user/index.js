@@ -9,26 +9,26 @@ import pathMatch from 'lib/middleware/pathMatch.js'
 import statusCode from 'lib/status.code.js'
 import Resolved from 'utils/resolved.js'
 import wrap from 'utils/wrapAsync.js'
-import { viewUserProfile, updateMail, getUserAvatar, updateUserPassword, updateUserProfile } from './operation.js'
+import { viewUserProfile, updateMail, getUserAvatar, updateUserPassword, updateUserProfile } from './operations.js'
 const server = express()
 	.use(
 		withSession(
 			express.json(),
-			pathMatch(/^\/users\/?/, wrap(async (req, res) => {
-				const { pathMatch: { url }, body } = req, user = await req.session?.user
-				let [uid, action = ''] = url.split('/', 2)
+			wrap(async (req, res) => {
+				const { url, body } = req, user = await req.session?.user
+				let [uid, action = ''] = url.split('/').splice(1)
 				logger.debug(`${user} requesting ${JSON.stringify({ action, uid })}`)
 				switch (action.toLowerCase()) {
 					case '':
 						res.json(await viewUserProfile(user, uid))
 						break
-					case 'updateprofile':
+					case 'update-profile':
 						(await updateUserProfile(uid, body, user))(res)
 						break
-					case 'updatemail':
+					case 'update-mail':
 						(await updateMail(user, body))(res)
 						break
-					case 'updatepassword':
+					case 'update-password':
 						(await updateUserPassword(uid, body, user))(res)
 						break
 					case 'avatar':
@@ -37,7 +37,7 @@ const server = express()
 					default:
 						throw new InvalidOperationError(action, { user, url })
 				}
-			}, 'userRequestRouter')),
+			}, 'userRequestRouter'),
 			// Uncaught request handler
 			(req, res) => {
 			// Only update statusCode if it has not been modified
