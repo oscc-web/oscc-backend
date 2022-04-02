@@ -27,6 +27,7 @@ const server = express()
 		},
 		proxy(new Resolved('$groups').resolver))
 	)
+	.use(pathMatch('/user', proxy(new Resolved('$user').resolver)))
 	.use(bodyParser.json({ type: req => req.method === 'POST' }))
 	.post('/login',
 		wrap(async (req, res, next) => {

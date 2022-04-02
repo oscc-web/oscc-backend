@@ -12,67 +12,48 @@ const appData = new AppData('user-profile'),
 	 * The default successful response handler
 	 * @param {import('express').Response} res
 	 */
-	successful = res => res.status(statusCode.Success.OK).end()
+	successful = res => res.status(statusCode.Success.OK).end(),
+	/**
+	 * The default successful response handler
+	 * @param {import('express').Response} res
+	 */
+	notFound = res => res.status(statusCode.ClientError.NotFound).end()
 /**
  *
  * @param {String} userID
  * ID of the avatar owner
- * @param {User} user
- * The user making this request
- * @param {(import('express').Response} res
- * Http response
  * @returns {(import('express').Response) => undefined}
  * The handler function to send the response
  */
-export async function getUserAvatar(userID, user, res) {
-	return await new Promise((resolve, reject) => {
-		appDataWithFs
-			.loadFile({ userID, url: '/avatar' })
-			.then(async fileDescriptor => {
-				if (!fileDescriptor) reject(new EntryNotFoundError(
-					`User<${userID}>'s avatar`,
-					{ user }
-				))
-				logger.access(`Get User<${userID}>'s avatar <${fileDescriptor.fileID}>`)
-				// Pipe file to res
-				fileDescriptor.pipe(res)
-			})
-			.catch(e => {
-				reject(new EntryNotFoundError(
-					`User<${userID}>'s avatar`,
-					{ user }
-				))
-			})
-		resolve(successful)
-	})
+export async function getUserAvatar(userID) {
+	const fileDescriptor = await appDataWithFs.loadFile({ userID, url: '/avatar' })
+	// No avatar belongs to the userID
+	if (!fileDescriptor) return notFound
+	else return res => fileDescriptor.pipe(res)
 }
 /**
  *
  * @param {User} currentUser
  * The user making this request
- * @param {String} uid
+ * @param {String} userID
  * User ID string
  * @returns {(import('express').Response) => undefined}
  * The handler function to send the response
  */
-export async function viewUserProfile(currentUser, uid) {
-	const targetUser = await User.locate(uid)
+export async function viewUserProfile(currentUser, userID) {
+	const targetUser = await User.locate(userID)
 	if (!(targetUser instanceof User)) throw new EntryNotFoundError(
-		`User <${uid}>`, { currentUser }
+		`User <${userID}>`, { currentUser }
 	)
-	let content = await appData.load({ uid }) || {}
-	let userProfile = Object.assign(content, { name: targetUser.name })
+	let content = await getRawUserProfile(userID),
+		userProfile = { ...content, name: targetUser.name }
 	// Check if mail is visible
-	if (currentUser.hasPriv('VIEW_USER_EMAIL') || (await appData.load({ uid })).setting?.mailVisibility) {
+	if (currentUser.hasPriv('VIEW_USER_EMAIL') || content.mailVisibility) {
 		userProfile.mail = targetUser.mail
 	}
 	// Check if groups is visible
-	userProfile.groups = (await currentUser.viewGroups(targetUser)).map(group => {
-		return {
-			id: group.id,
-			name: group.name
-		}
-	})
+	userProfile.groups = (await currentUser.viewGroups(targetUser))
+		.map(({ id, name }) => ({ id, name }))
 	return userProfile
 }
 /**
@@ -93,7 +74,6 @@ export async function updateMail(user, body) {
 	mail = mail.toLowerCase()
 	switch (action) {
 		case 'VALIDATE':
-
 			if (!await user.login(password)) {
 				throw new OperationFailedError(
 					`check ${user}'s password`
@@ -107,31 +87,26 @@ export async function updateMail(user, body) {
 						{ user }
 					)
 				}
-				return await new Promise((resolve, reject) => {
-					token = seed(6)
-					appData
-						.store({ mail, action: 'validate-mail' }, { token }, { replace: true })
-						.then(async ({ acknowledged } = {}) => {
-							if (acknowledged) {
-								const link = `/updateMail?token=${token}&mail=${Buffer.from(mail).toString('base64')}`
-								try {
-									await sendMail(mail, 'validateEmail', { link })
-								} catch (e) {
-									reject(new OperationFailedError(
-										`send mail to< ${mail}>`,
-										{ user }
-									))
-								}
-							} else {
-								reject(new OperationFailedError(
-									`insert mail: <${mail}> and token: <${token}>`,
-									{ user }
-								))
-							}
-						})
-					// Return successful
-					resolve(successful)
-				})
+				token = seed(6)
+				let { acknowledged } = await appData.store({ mail, action: 'validate-mail' }, { token }, { replace: true })
+				if (acknowledged) {
+					const link = `/updateMail?token=${token}&mail=${Buffer.from(mail).toString('base64')}`
+					try {
+						await sendMail(mail, 'validateEmail', { link })
+					} catch (e) {
+						throw new OperationFailedError(
+							`send mail to< ${mail}>`,
+							{ user }
+						)
+					}
+				} else {
+					throw new OperationFailedError(
+						`insert mail: <${mail}> and token: <${token}>`,
+						{ user }
+					)
+				}
+				// Return successful
+				return successful
 			}
 		case 'UPDATE':
 			if (validateUpdateMailPayload(mail, token)){
@@ -144,7 +119,7 @@ export async function updateMail(user, body) {
 }
 /**
  *
- * @param {String} uid
+ * @param {String} userID
  * Target userID
  * @param {Object} body
  * Update payload
@@ -153,23 +128,27 @@ export async function updateMail(user, body) {
  * @returns {(import('express').Response) => undefined}
  * The handler function to send the response
  */
-export async function updateUserProfile(uid, body, user) {
-	if (uid === user.userID){
-		const { name } = body
-		if (name) {
-			user.name = name
-			await user.update()
-			delete body.name
+export async function updateUserProfile(userID, body, user) {
+	if (userID === user.userID){
+		try {
+			if (body?.name) {
+				user.name = body.name
+				await user.update()
+				delete body.name
+			}
+			await appData.store({ userID },
+				{ ...await getRawUserProfile(userID), ...body },
+				{ replace: true }
+			)
+		} catch (e){
+			throw new OperationFailedError(
+				`update User<${userID}>'s profile`,
+				{ user }
+			)
 		}
-		let content = await appData.load({ uid }) || {}
-		content = Object.assign(content, body)
-		await appData.store({ uid },
-			content,
-			{ replace: true }
-		)
 	} else {
 		throw new PrivilegeError(
-			`update User<${uid}>'s profile`,
+			`update User<${userID}>'s profile`,
 			{ user }
 		)
 	}
@@ -177,7 +156,7 @@ export async function updateUserProfile(uid, body, user) {
 }
 /**
  *
- * @param {String} uid
+ * @param {String} userID
  * Target userID
  * @param {Object} body
  * Update payload
@@ -186,8 +165,8 @@ export async function updateUserProfile(uid, body, user) {
  * @returns {(import('express').Response) => undefined}
  * The handler function to send the response
  */
-export async function updateUserPassword(uid, body, user) {
-	if (uid === user.userID){
+export async function updateUserPassword(userID, body, user) {
+	if (userID === user.userID){
 		const {
 			oldPassword,
 			newPassword
@@ -200,7 +179,7 @@ export async function updateUserPassword(uid, body, user) {
 		)
 	} else {
 		throw new PrivilegeError(
-			`update User<${uid}>'s profile`,
+			`update User<${userID}>'s profile`,
 			{ user }
 		)
 	}
@@ -223,4 +202,16 @@ async function validateUpdateMailPayload(mail, token) {
 		)
 	}
 	return true
+}
+/**
+ *
+ * @param {String} userID
+ * UserID
+ * @returns {Object }
+ */
+async function getRawUserProfile(userID) {
+	return {
+		mailVisibility: false,
+		...await appData.load({ userID }) || {}
+	}
 }

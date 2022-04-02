@@ -16,8 +16,7 @@ const server = express()
 			express.json(),
 			pathMatch(/^\/users\/?/, wrap(async (req, res) => {
 				const { pathMatch: { url }, body } = req, user = await req.session?.user
-				let [uid, action] = url.split('/', 2)
-				action = action || ''
+				let [uid, action = ''] = url.split('/', 2)
 				logger.debug(`${user} requesting ${JSON.stringify({ action, uid })}`)
 				switch (action.toLowerCase()) {
 					case '':
@@ -33,7 +32,7 @@ const server = express()
 						(await updateUserPassword(uid, body, user))(res)
 						break
 					case 'avatar':
-						await getUserAvatar(uid, user, res)
+						(await getUserAvatar(uid))(res)
 						break
 					default:
 						throw new InvalidOperationError(action, { user, url })
