@@ -23,13 +23,13 @@ const server = express()
 						res.json(await viewUserProfile(user, uid))
 						break
 					case 'update-profile':
-						(await updateUserProfile(uid, body, user))(res)
+						(await updateUserProfile(user, body))(res)
 						break
 					case 'update-mail':
 						(await updateMail(user, body))(res)
 						break
 					case 'update-password':
-						(await updateUserPassword(uid, body, user))(res)
+						(await updateUserPassword(user, body))(res)
 						break
 					case 'avatar':
 						(await getUserAvatar(uid))(res)

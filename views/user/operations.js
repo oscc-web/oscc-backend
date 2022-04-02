@@ -5,7 +5,7 @@ import { AppDataWithFs } from 'lib/appDataWithFs.js'
 import { seed } from 'utils/crypto.js'
 import { sendMail } from '../../modules/mailer/lib.js'
 import statusCode from 'lib/status.code.js'
-import { ConflictEntryError, EntryNotFoundError, PrivilegeError, OperationFailedError } from 'lib/errors.js'
+import { ConflictEntryError, EntryNotFoundError, PrivilegeError, OperationFailedError, InvalidOperationError, ChallengeFailedError } from 'lib/errors.js'
 const appData = new AppData('user-profile'),
 	appDataWithFs = new AppDataWithFs('user-profile'),
 	/**
@@ -109,46 +109,39 @@ export async function updateMail(user, body) {
 				return successful
 			}
 		case 'UPDATE':
-			if (validateUpdateMailPayload(mail, token)){
+			if (await validateUpdateMailPayload(mail, token)){
 				user.mail = mail
 				await appData.delete({ mail, action: 'validate-mail' })
 				return successful
 			}
 			break
+		default:
+			throw new InvalidOperationError(action, { user })
 	}
 }
 /**
  *
- * @param {String} userID
- * Target userID
- * @param {Object} body
- * Update payload
  * @param {User} user
  * The user making this request
+ * @param {Object} body
+ * Update payload
  * @returns {(import('express').Response) => undefined}
  * The handler function to send the response
  */
-export async function updateUserProfile(userID, body, user) {
-	if (userID === user.userID){
-		try {
-			if (body?.name) {
-				user.name = body.name
-				await user.update()
-				delete body.name
-			}
-			await appData.store({ userID },
-				{ ...await getRawUserProfile(userID), ...body },
-				{ replace: true }
-			)
-		} catch (e){
-			throw new OperationFailedError(
-				`update User<${userID}>'s profile`,
-				{ user }
-			)
+export async function updateUserProfile(user, body) {
+	try {
+		if (body?.name) {
+			user.name = body.name
+			await user.update()
+			delete body.name
 		}
-	} else {
-		throw new PrivilegeError(
-			`update User<${userID}>'s profile`,
+		await appData.store({ userID: user.userID },
+			{ ...await getRawUserProfile(user.userID), ...body },
+			{ replace: true }
+		)
+	} catch (e){
+		throw new OperationFailedError(
+			`update User <${user.userID}>'s profile`,
 			{ user }
 		)
 	}
@@ -156,33 +149,21 @@ export async function updateUserProfile(userID, body, user) {
 }
 /**
  *
- * @param {String} userID
- * Target userID
- * @param {Object} body
- * Update payload
  * @param {User} user
  * The user making this request
+ * @param {Object} body
+ * Update payload
  * @returns {(import('express').Response) => undefined}
  * The handler function to send the response
  */
-export async function updateUserPassword(userID, body, user) {
-	if (userID === user.userID){
-		const {
-			oldPassword,
-			newPassword
-		} = body
-		if (await user.login(oldPassword)){
-			user.password = newPassword
-			await user.update()
-		} else throw new OperationFailedError(
-			`check ${user}'s password`
-		)
-	} else {
-		throw new PrivilegeError(
-			`update User <${userID}>'s profile`,
-			{ user }
-		)
-	}
+export async function updateUserPassword(user, body) {
+	const { oldPassword, newPassword } = body
+	if (await user.login(oldPassword)){
+		user.password = newPassword
+		await user.update()
+	} else throw new OperationFailedError(
+		`check ${user}'s password`
+	)
 	return successful
 }
 /**
@@ -196,9 +177,8 @@ export async function updateUserPassword(userID, body, user) {
 async function validateUpdateMailPayload(mail, token) {
 	const content = await appData.load({ mail, action: 'validate-mail' })
 	if (!content || content.token !== token) {
-		throw new EntryNotFoundError(
-			`token: <${token}>`,
-			{ mail }
+		throw new ChallengeFailedError(
+			`validate token <${token}> attached with mail <${mail}>`
 		)
 	}
 	return true
