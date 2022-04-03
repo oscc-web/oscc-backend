@@ -12,6 +12,7 @@ export default async function userLoginHandler(req) {
 	const {
 		login,
 		password,
+		persistent = false
 	} = body
 	// Try locate the user
 	const user = await User.locate(login)
@@ -23,7 +24,7 @@ export default async function userLoginHandler(req) {
 		const session = new Session(
 			user,
 			{
-				persistent: false,
+				persistent,
 				initiator: req.headers?.['user-agent'],
 				origin: req.origin
 			}

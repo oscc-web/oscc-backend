@@ -12,47 +12,41 @@ import wrap from 'utils/wrapAsync.js'
 import { viewUserProfile, updateMail, getUserAvatar, updateUserPassword, updateUserProfile } from './operations.js'
 const server = express()
 	.use(
-		withSession(
-			express.json(),
-			wrap(async (req, res) => {
-				const { url, body } = req, user = await req.session?.user
-				const [userID, action = '', ...search] = url.split(/\/|\?|&/gi).splice(1)
-				logger.debug(`${user} requesting ${JSON.stringify({ action, userID })}`)
-				switch (action.toLowerCase()) {
-					case '':
-						res.json(await viewUserProfile(user, userID))
-						break
-					case 'update-profile':
-						(await updateUserProfile(user, body))(res)
-						break
-					case 'update-mail':
-						(await updateMail(user, body))(res)
-						break
-					case 'update-password':
-						(await updateUserPassword(user, body))(res)
-						break
-					case 'avatar':
-						(await getUserAvatar(userID, search))(res)
-						break
-					default:
-						throw new InvalidOperationError(action, { user, url })
-				}
-			}, 'userRequestRouter'),
-			// Uncaught request handler
-			(req, res) => {
+		withSession(),
+		express.json(),
+		wrap(async (req, res) => {
+			const { url, body } = req, user = await req.session?.user
+			const [userID, action = '', ...search] = url.split(/\/|\?|&/gi).splice(1)
+			logger.debug(`${user} requesting ${JSON.stringify({ action, userID })}`)
+			switch (action.toLowerCase()) {
+				case '':
+					res.json(await viewUserProfile(user, userID))
+					break
+				case 'update-profile':
+					(await updateUserProfile(user, body))(res)
+					break
+				case 'update-mail':
+					(await updateMail(user, body))(res)
+					break
+				case 'update-password':
+					(await updateUserPassword(user, body))(res)
+					break
+				case 'avatar':
+					(await getUserAvatar(userID, search))(res)
+					break
+				default:
+					throw new InvalidOperationError(action, { user, url })
+			}
+		}, 'userRequestRouter'),
+		// Uncaught request handler
+		(req, res) => {
 			// Only update statusCode if it has not been modified
-				if (res.statusCode === statusCode.Success.OK) {
-					logger.errAcc(`Unable to handle request ${req.headers.host}${req.url} from ${req.origin}`)
-					res.status(statusCode.ClientError.NotFound)
-				}
-				res.end()
+			if (res.statusCode === statusCode.Success.OK) {
+				logger.errAcc(`Unable to handle request ${req.headers.host}${req.url} from ${req.origin}`)
+				res.status(statusCode.ClientError.NotFound)
 			}
-		).otherwise(
-			({ method, url, origin }, res) => {
-				logger.errAcc(`Rejected ${method} ${url} from ${origin}: no session found`)
-				res.status(statusCode.ClientError.Unauthorized).end()
-			}
-		)
+			res.end()
+		}
 	)
 // Request error handler
 	.use(CustomError.handler)
