@@ -1,4 +1,4 @@
-import User from 'lib/user.js'
+import User, { GuestUser } from 'lib/user.js'
 import logger from 'lib/logger.js'
 import { AppData } from 'lib/appData.js'
 import { AppDataWithFs } from 'lib/appDataWithFs.js'
@@ -47,7 +47,7 @@ export async function getUserAvatar(userID, [fileID]) {
  * @returns {(import('express').Response) => undefined}
  * The handler function to send the response
  */
-export async function viewUserProfile(currentUser, userID) {
+export async function viewUserProfile(currentUser = new GuestUser, userID) {
 	const targetUser = await User.locate(userID)
 	if (!(targetUser instanceof User)) throw new EntryNotFoundError(
 		`User <${userID}>`, { currentUser }
