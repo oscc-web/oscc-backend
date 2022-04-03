@@ -5,8 +5,14 @@ export default async function getGroupsList(user) {
 	if (!user.hasPriv(PRIV.ALTER_USER_GROUP)) throw new PrivilegeError(
 		'get list of all groups', { user }
 	)
-	return (await Group.list)
-		.filter(group => group.challenge(user))
+	const groupList = await Group.list,
+		challengeResult = groupList.map(
+			async group => await group.challenge(user)
+				? group
+				: undefined
+		)
+	return (await Promise.all(challengeResult))
+		.filter(group => group instanceof Group)
 		.map(group => {
 			const { id, name, visibility, privileges } = group
 			return {

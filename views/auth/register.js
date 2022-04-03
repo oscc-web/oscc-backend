@@ -12,7 +12,7 @@ const tmpAppData = new AppData('@tmp')
 export default async function registerRequestHandler(req) {
 	const { body } = req
 	if (!body || typeof body !== 'object') throw new BadRequestError(
-		'json body', body, req
+		'json payload', body, req
 	)
 	/**
 	* @type {{

@@ -21,20 +21,16 @@ const server = express()
 	)
 	.post('/register',
 		express.json(),
-		wrap(async (res, req) => await (await registerRequestHandler(req))(res))
+		wrap(async (req, res) => await (await registerRequestHandler(req))(res))
 	)
-	.post('/logout',
-		withSession(wrap(async (req, res, next) => {
-			const { session } = req
-			if (session instanceof Session) {
-				logger.access(`User <${session.userID}> logged out`)
-				session.drop()
-			}
-		})),
-		(req, res) => success(
-			res.cookie(SESSION_TOKEN_NAME, '', { expires: new Date(0) })
-		)
-	)
+	.post('/logout', withSession(wrap(async (req, res) => {
+		const { session } = req
+		if (session instanceof Session) {
+			logger.access(`User <${session.userID}> logged out`)
+			session.drop()
+		}
+		success(res)
+	})))
 	// Request error handler
 	.use(CustomError.handler)
 	// Remove express powered-by header

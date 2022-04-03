@@ -1,6 +1,6 @@
 // Imports
 import { config } from 'lib/env.js'
-import { CustomError, InvalidOperationError } from 'lib/errors.js'
+import { CustomError, InvalidOperationError, PrivilegeError } from 'lib/errors.js'
 import logger from 'lib/logger.js'
 import express from 'express'
 // Middleware
@@ -15,6 +15,13 @@ import wrap from 'utils/wrapAsync.js'
 // Local dependencies
 import getGroupsList from './get-list.js'
 import { create, remove, update } from './operations.js'
+import { PRIV } from 'lib/privileges.js'
+// Privilege Checker
+async function checkPrivilege(req, user) {
+	if (!await user.hasPriv(PRIV.ALTER_GROUP_PRIVILEGES)) throw new PrivilegeError(
+		'Alter groups', { user, ...req }
+	)
+}
 // Compose the server
 const server = express()
 	.use(
@@ -28,12 +35,15 @@ const server = express()
 						res.json(await getGroupsList(user))
 						break
 					case '/create':
+						await checkPrivilege(req, user);
 						(await create(body, user))(res)
 						break
 					case '/update':
+						await checkPrivilege(req, user);
 						(await update(body, user))(res)
 						break
 					case '/remove':
+						await checkPrivilege(req, user);
 						(await remove(body, user))(res)
 						break
 					default:

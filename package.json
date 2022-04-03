@@ -13,6 +13,7 @@
     "http-proxy": "^1.18.1",
     "husky": "^7.0.4",
     "jsonwebtoken": "^8.5.1",
+    "lib": "file:./lib",
     "lint-staged": "^12.3.4",
     "lodash": "^4.17.21",
     "moment": "^2.29.1",
@@ -22,13 +23,12 @@
     "password-prompt": "^1.1.2",
     "raw-body": "^2.5.1",
     "sodajs": "^0.4.10",
+    "utils": "file:./utils",
     "uuid": "^8.3.2",
     "vhost": "^3.0.2",
     "winston": "^3.6.0",
     "winston-mongodb": "^5.0.7",
-    "winston-transport": "^4.5.0",
-    "lib": "file:./lib",
-    "utils": "file:./utils"
+    "winston-transport": "^4.5.0"
   },
   "name": "ysyx-backend-services",
   "description": "YSYX backend services",

@@ -1,4 +1,5 @@
 // Environmental setup
+import { DOMAIN } from 'lib/env.js'
 import logger from 'lib/logger.js'
 import express from 'express'
 import { contentDir, AppDataWithFs } from 'lib/appDataWithFs.js'
@@ -13,18 +14,18 @@ import Resolved from 'utils/resolved.js'
 import wrap from 'utils/wrapAsync.js'
 import { upload as manifest } from './manifest.js'
 import { stat } from 'fs'
+import cors from 'cors'
 // Temp storage path
 // const storagePath = `${PROJECT_ROOT}/storage`
 logger.info('Staring upload server')
 const server = express()
-// Filter method, PUT is allowed
+	.use(cors({ origin: `https://${DOMAIN}`, credentials: true }))
+	// Filter method, PUT is allowed
 	.use(
 		conditional(({ method }) => method === 'PUT',
 			// Filer user not login
 			withSession(
 			// Filter user does not have privilege to upload
-			// TODO privileged(
-			// ,
 			// create servers for each path in manifest
 				...Object.entries(await manifest()).map(([
 					path,

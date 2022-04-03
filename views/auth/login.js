@@ -15,7 +15,7 @@ export default async function userLoginHandler(req) {
 	} = body
 	// Try locate the user
 	const user = await User.locate(login)
-	if (!(user instanceof User)) throw EntryNotFoundError(
+	if (!(user instanceof User)) throw new EntryNotFoundError(
 		`User <${login}>`, req
 	)
 	// Challenge password
