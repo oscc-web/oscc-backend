@@ -29,13 +29,13 @@ const server = express()
 		({ method, url }) => {
 			const [prefix, userID, action, ...segments] = url.split('/').splice(1)
 			if (prefix !== 'user' || !userID) return
-			if (method !== 'POST' && action !== 'avatar') return
+			if (method !== 'POST' && !action.startsWith('avatar')) return
 			return { url: ['', userID, action, ...segments].join('/') }
 		},
 		proxy(new Resolved('$user').resolver)
 	))
 	// Auth view
-	.use(pathMatch.POST(/\/(login|logout|register|auth)/ig,
+	.use(pathMatch.POST(/^\/(login|logout|register|auth)/ig,
 		proxy(new Resolved('$auth').resolver)
 	))
 	// Standard error handler

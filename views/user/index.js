@@ -16,23 +16,23 @@ const server = express()
 			express.json(),
 			wrap(async (req, res) => {
 				const { url, body } = req, user = await req.session?.user
-				let [uid, action = ''] = url.split('/').splice(1)
-				logger.debug(`${user} requesting ${JSON.stringify({ action, uid })}`)
+				const [userID, action = '', ...search] = url.split(/\/|\?|&/gi).splice(1)
+				logger.debug(`${user} requesting ${JSON.stringify({ action, userID })}`)
 				switch (action.toLowerCase()) {
 					case '':
-						res.json(await viewUserProfile(user, uid))
+						res.json(await viewUserProfile(user, userID))
 						break
 					case 'update-profile':
-						(await updateUserProfile(uid, body, user))(res)
+						(await updateUserProfile(user, body))(res)
 						break
 					case 'update-mail':
 						(await updateMail(user, body))(res)
 						break
 					case 'update-password':
-						(await updateUserPassword(uid, body, user))(res)
+						(await updateUserPassword(user, body))(res)
 						break
 					case 'avatar':
-						await getUserAvatar(uid, user, res)
+						(await getUserAvatar(userID, search))(res)
 						break
 					default:
 						throw new InvalidOperationError(action, { user, url })
