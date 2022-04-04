@@ -173,6 +173,14 @@ export async function updateUserPassword(user, body) {
 	)
 	return successful
 }
+/**
+ *
+ * @param {String} userID
+ * The ID of user making this request
+ * @param {Object} body
+ * Update payload
+ * @returns
+ */
 export async function updateInstitution(userID, body) {
 	let { override, ID, name } = body
 	if (override) {
@@ -192,23 +200,6 @@ export async function updateInstitution(userID, body) {
 		await updateUserInstitution(userID, ID)
 	}
 	return successful
-}
-/**
- *
- * @param {Object} body
- * Search payload
- * @returns {Object[]}
- * Orgs including name
- */
-export async function searchOrgs(body) {
-	let { name = '' } = body
-	name = name.trim().toLowerCase()
-	return Object
-		.entries(orgs)
-		.map(([ID, el]) => ({ ID, ...el }))
-		.filter(org =>
-			include(org.ID, name) || include(org.name, name)
-		)
 }
 /**
  * @param {String} mail
@@ -238,22 +229,10 @@ async function getRawUserProfile(userID) {
 	}
 }
 /**
- * Check if str exists in source
- * @param {String | Object} source
- * Payload
- * @param {String} str
- * Search string
- * @returns
+ * Check name is valid and return trimmed value
+ * @param {String | Object} name
+ * @returns {String | Object}
  */
-function include(source, str){
-	if (typeof str !== 'string') throw new TypeError(`A string is required but received a/an ${typeof str}`)
-	if (typeof source === 'string') {
-		return source.toLowerCase().includes(str)
-	} else if (typeof source === 'object') {
-		for (const val of Object.values(source)) if (include(val, str)) return true
-	}
-	return false
-}
 function checkLocaleKey(name) {
 	const lowerCase = /^[a-z]+$/,
 		upperCase = /^[A-Z]+$/
@@ -273,6 +252,13 @@ function checkLocaleKey(name) {
 	}
 	return null
 }
+/**
+ * Update Institution in appData
+ * @param {String} userID
+ * user ID
+ * @param {Object} institution
+ * institution object
+ */
 async function updateUserInstitution(userID, institution) {
 	await appData.store({ userID },
 		{ ...await getRawUserProfile(userID), institution },
