@@ -9,7 +9,7 @@ import pathMatch from 'lib/middleware/pathMatch.js'
 import statusCode from 'lib/status.code.js'
 import Resolved from 'utils/resolved.js'
 import wrap from 'utils/wrapAsync.js'
-import { viewUserProfile, updateMail, getUserAvatar, updateUserPassword, updateUserProfile, searchOrgs } from './operations.js'
+import { viewUserProfile, updateMail, getUserAvatar, updateUserPassword, updateUserProfile, updateInstitution } from './operations.js'
 const server = express()
 	.use(
 		withSession(),
@@ -34,8 +34,8 @@ const server = express()
 				case 'avatar':
 					(await getUserAvatar(userID, search))(res)
 					break
-				case 'search':
-					res.json(await searchOrgs(body))
+				case 'institution':
+					(await updateInstitution(user.userID, body))(res)
 					break
 				default:
 					throw new InvalidOperationError(action, { user, url })

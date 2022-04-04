@@ -7,6 +7,7 @@ import { seed } from 'utils/crypto.js'
 import { sendMail } from '../../modules/mailer/lib.js'
 import statusCode from 'lib/status.code.js'
 import { ConflictEntryError, EntryNotFoundError, PrivilegeError, OperationFailedError, InvalidOperationError, ChallengeFailedError } from 'lib/errors.js'
+import logger from 'lib/logger.js'
 const appData = new AppData('user-profile'),
 	appDataWithFs = new AppDataWithFs('user-profile'),
 	path = import.meta.url.replace(/^\w+:\/\//, ''),
@@ -172,6 +173,26 @@ export async function updateUserPassword(user, body) {
 	)
 	return successful
 }
+export async function updateInstitution(userID, body) {
+	let { override, ID, name } = body
+	if (override) {
+		if (name = checkLocaleKey(name)) {
+			logger.warn(JSON.stringify(name))
+			await updateUserInstitution(userID, { ID, name })
+		}
+	} else {
+		if (!ID && typeof ID === 'string') throw new InvalidOperationError(
+			`update User <${userID}>'s institution, ID is not valid`
+		)
+		ID = ID.trim().toLowerCase()
+		if (!orgs[ID]) throw EntryNotFoundError(
+			`institution ID: <${ID}>`,
+			{ userID }
+		)
+		await updateUserInstitution(userID, ID)
+	}
+	return successful
+}
 /**
  *
  * @param {Object} body
@@ -232,4 +253,29 @@ function include(source, str){
 		for (const val of Object.values(source)) if (include(val, str)) return true
 	}
 	return false
+}
+function checkLocaleKey(name) {
+	const lowerCase = /^[a-z]+$/,
+		upperCase = /^[A-Z]+$/
+	if (typeof name === 'string' && name.trim()) return name.trim()
+	if (typeof name === 'object') {
+		let keys = Object.keys(name)
+		if (keys.length) {
+			for (const key of keys){
+				const [language, region] = key.split('-')
+				if (!language.length === 2 || !lowerCase.test(language)) return null
+				if (region && (!region.length === 2 || !upperCase.test(region))) return null
+				if (name[key] && name[key].trim()) name[key] = name[key].trim()
+				else return null
+			}
+			return name
+		}
+	}
+	return null
+}
+async function updateUserInstitution(userID, institution) {
+	await appData.store({ userID },
+		{ ...await getRawUserProfile(userID), institution },
+		{ replace: true }
+	)
 }
