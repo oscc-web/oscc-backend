@@ -1,5 +1,6 @@
 import User, { GuestUser } from 'lib/user.js'
-import logger from 'lib/logger.js'
+import { readFileSync } from 'fs'
+import { basename, dirname, resolve } from 'path'
 import { AppData } from 'lib/appData.js'
 import { AppDataWithFs } from 'lib/appDataWithFs.js'
 import { seed } from 'utils/crypto.js'
@@ -8,6 +9,12 @@ import statusCode from 'lib/status.code.js'
 import { ConflictEntryError, EntryNotFoundError, PrivilegeError, OperationFailedError, InvalidOperationError, ChallengeFailedError } from 'lib/errors.js'
 const appData = new AppData('user-profile'),
 	appDataWithFs = new AppDataWithFs('user-profile'),
+	path = import.meta.url.replace(/^\w+:\/\//, ''),
+	orgs = Object.freeze(
+		JSON.parse(readFileSync(
+			resolve(dirname(path), 'orgs.json')
+		))
+	),
 	/**
 	 * The default successful response handler
 	 * @type {(res: import('express').Response) => Any}
@@ -166,6 +173,23 @@ export async function updateUserPassword(user, body) {
 	return successful
 }
 /**
+ *
+ * @param {Object} body
+ * Search payload
+ * @returns {Object[]}
+ * Orgs including name
+ */
+export async function searchOrgs(body) {
+	let { name = '' } = body
+	name = name.trim().toLowerCase()
+	return Object
+		.entries(orgs)
+		.map(([ID, el]) => ({ ID, ...el }))
+		.filter(org =>
+			include(org.ID, name) || include(org.name, name)
+		)
+}
+/**
  * @param {String} mail
  * User's email
  * @param {String} token
@@ -191,4 +215,21 @@ async function getRawUserProfile(userID) {
 		mailVisibility: false,
 		...await appData.load({ userID }) || {}
 	}
+}
+/**
+ * Check if str exists in source
+ * @param {String | Object} source
+ * Payload
+ * @param {String} str
+ * Search string
+ * @returns
+ */
+function include(source, str){
+	if (typeof str !== 'string') throw new TypeError(`A string is required but received a/an ${typeof str}`)
+	if (typeof source === 'string') {
+		return source.toLowerCase().includes(str)
+	} else if (typeof source === 'object') {
+		for (const val of Object.values(source)) if (include(val, str)) return true
+	}
+	return false
 }
