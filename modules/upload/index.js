@@ -62,16 +62,21 @@ const server = express()
 									// ... (req.headers || {}),
 									...{ type: req.headers?.['content-type'] },
 									// Fs.stat
-									...await new Promise((resolve, reject) => stat(filePath, (err, stats) => {
-										if (err) reject(err)
-										else resolve(stats)
-									}))
+									...await new Promise((resolve, reject) => stat(
+										filePath,
+										(err, stats) => {
+											if (err) reject(err)
+											else resolve(stats)
+										}
+									))
 								},
 								// Store args
 								{ duplicate, replace, ...conf }
 							),
 							await hook(req, res, () =>
-								res.status(statusCode.Success.Created).end(fileID)
+								res
+									.status(statusCode.Success.Created)
+									.end(fileID)
 							)
 						})
 					)

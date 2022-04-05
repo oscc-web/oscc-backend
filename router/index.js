@@ -12,9 +12,10 @@ import docs from './strategies/docs.js'
 import forum from './strategies/forum.js'
 // Libraries
 import statusCode from 'lib/status.code.js'
+import Deployer from 'lib/deployer.js'
+import { CustomError } from 'lib/errors.js'
 import Resolved from 'utils/resolved.js'
 import { WebsocketResponse } from 'utils/wsResponse.js'
-import { CustomError } from 'lib/errors.js'
 // Compose the server
 const server = express()
 	// Remove express powered-by header
@@ -48,24 +49,7 @@ const server = express()
 				return proxy(config.devProxy['@'])
 			})()
 			// Static file server
-			// eslint-disable-next-line spellcheck/spell-checker
-			: express.static(resolveDistPath('ysyx')),
-		// Serve index.html
-		async (req, res, next) => {
-			try {
-				return await new Promise((resolve, reject) => {
-					res.sendFile(
-						'./index.html',
-						{ root: resolveDistPath('ysyx') },
-						e => {
-							if (e instanceof Error) reject(e)
-							else resolve()
-						})
-				})
-			} catch (e) {
-				next(e)
-			}
-		}
+			: new Deployer('home', true).server
 	))
 	// DOCS
 	.use(vhost(/^docs\.ysyx\.(org|cc|dev|local)$/i, docs))
