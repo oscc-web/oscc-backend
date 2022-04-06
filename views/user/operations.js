@@ -1,21 +1,13 @@
 import User, { GuestUser } from 'lib/user.js'
-import { readFileSync } from 'fs'
-import { basename, dirname, resolve } from 'path'
 import { AppData } from 'lib/appData.js'
 import { AppDataWithFs } from 'lib/appDataWithFs.js'
 import { seed } from 'utils/crypto.js'
 import { sendMail } from '../../modules/mailer/lib.js'
 import statusCode from 'lib/status.code.js'
 import { ConflictEntryError, EntryNotFoundError, PrivilegeError, OperationFailedError, InvalidOperationError, ChallengeFailedError } from 'lib/errors.js'
-import logger from 'lib/logger.js'
+import { orgs, checkLocaleKey } from 'utils/searchOrgs.js'
 const appData = new AppData('user-profile'),
 	appDataWithFs = new AppDataWithFs('user-profile'),
-	path = import.meta.url.replace(/^\w+:\/\//, ''),
-	orgs = Object.freeze(
-		JSON.parse(readFileSync(
-			resolve(dirname(path), 'orgs.json')
-		))
-	),
 	/**
 	 * The default successful response handler
 	 * @type {(res: import('express').Response) => Any}
@@ -30,7 +22,7 @@ const appData = new AppData('user-profile'),
  *
  * @param {String} userID
  * ID of the avatar owner
- * @returns {(res: import('express').Response) => Any}
+ * @returns {Promise<(import('express').Response) => undefined>}
  * The handler function to send the response
  */
 export async function getUserAvatar(userID, [fileID]) {
@@ -52,7 +44,7 @@ export async function getUserAvatar(userID, [fileID]) {
  * The user making this request
  * @param {String} userID
  * User ID string
- * @returns {(import('express').Response) => undefined}
+ * @returns {Promise<(import('express').Response) => undefined>}
  * The handler function to send the response
  */
 export async function viewUserProfile(currentUser = new GuestUser, userID) {
@@ -77,8 +69,9 @@ export async function viewUserProfile(currentUser = new GuestUser, userID) {
  * The user making this request
  * @param {Object} body
  * request payload
- * @returns {(import('express').Response) => undefined}
+ * @returns {Promise<(import('express').Response) => undefined>}
  * The handler function to send the response
+ * @throws {ChallengeFailedError|ConflictEntryError|OperationFailedError|InvalidOperationError}
  */
 export async function updateMail(user, body) {
 	const {
@@ -135,7 +128,7 @@ export async function updateMail(user, body) {
  * The user making this request
  * @param {Object} body
  * Update payload
- * @returns {(import('express').Response) => undefined}
+ * @returns {Promise<(import('express').Response) => undefined>}
  * The handler function to send the response
  */
 export async function updateUserProfile(user, body) {
@@ -157,8 +150,9 @@ export async function updateUserProfile(user, body) {
  * The user making this request
  * @param {Object} body
  * Update payload
- * @returns {(import('express').Response) => undefined}
+ * @returns {Promise<(import('express').Response) => undefined>}
  * The handler function to send the response
+ * @throws {ChallengeFailedError|OperationFailedError}
  */
 export async function updateUserPassword(user, body) {
 	const { oldPassword, newPassword } = body
@@ -179,25 +173,32 @@ export async function updateUserPassword(user, body) {
  * The ID of user making this request
  * @param {Object} body
  * Update payload
- * @returns
+ * @returns {Promise<(import('express').Response) => undefined>}
+ * @throws {InvalidOperationError|EntryNotFoundError}
  */
 export async function updateInstitution(userID, body) {
 	let { override, ID, name } = body
+	// Override is true
 	if (override) {
-		if (name = checkLocaleKey(name)) {
-			logger.warn(JSON.stringify(name))
+		// Check name and update user's institution
+		if (name = await checkLocaleKey(name)) {
 			await updateUserInstitution(userID, { ID, name })
-		}
+		// Name is invalid
+		} else throw new InvalidOperationError(
+			`check name ${name}`,
+			userID
+		)
+	// Override is false
 	} else {
 		if (!ID && typeof ID === 'string') throw new InvalidOperationError(
 			`update User <${userID}>'s institution, ID is not valid`
 		)
 		ID = ID.trim().toLowerCase()
-		if (!orgs[ID]) throw EntryNotFoundError(
+		if (!orgs[ID]) throw new EntryNotFoundError(
 			`institution ID: <${ID}>`,
 			{ userID }
 		)
-		await updateUserInstitution(userID, ID)
+		await updateUserInstitution(userID, orgs[ID])
 	}
 	return successful
 }
@@ -220,7 +221,7 @@ async function challengeUpdateMailPayload(mail, token) {
  *
  * @param {String} userID
  * UserID
- * @returns {Object }
+ * @returns {Promise<Object>}
  */
 async function getRawUserProfile(userID) {
 	return {
@@ -229,38 +230,15 @@ async function getRawUserProfile(userID) {
 	}
 }
 /**
- * Check name is valid and return trimmed value
- * @param {String | Object} name
- * @returns {String | Object}
- */
-function checkLocaleKey(name) {
-	const lowerCase = /^[a-z]+$/,
-		upperCase = /^[A-Z]+$/
-	if (typeof name === 'string' && name.trim()) return name.trim()
-	if (typeof name === 'object') {
-		let keys = Object.keys(name)
-		if (keys.length) {
-			for (const key of keys){
-				const [language, region] = key.split('-')
-				if (!language.length === 2 || !lowerCase.test(language)) return null
-				if (region && (!region.length === 2 || !upperCase.test(region))) return null
-				if (name[key] && name[key].trim()) name[key] = name[key].trim()
-				else return null
-			}
-			return name
-		}
-	}
-	return null
-}
-/**
  * Update Institution in appData
  * @param {String} userID
  * user ID
  * @param {Object} institution
  * institution object
+ * @returns {Promise<import('mongodb').InsertOneResult | Promise<import('mongodb').UpdateResult>}
  */
 async function updateUserInstitution(userID, institution) {
-	await appData.store({ userID },
+	return await appData.store({ userID },
 		{ ...await getRawUserProfile(userID), institution },
 		{ replace: true }
 	)
