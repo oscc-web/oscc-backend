@@ -16,6 +16,10 @@ import Deployer from 'lib/deployer.js'
 import { CustomError } from 'lib/errors.js'
 import Resolved from 'utils/resolved.js'
 import { WebsocketResponse } from 'utils/wsResponse.js'
+// Server regexp composer
+const $ = ([str]) => new RegExp(`^${
+	str && `${str}\\.` || ''
+}YSYX\\.(OSCC\\.)?(ORG|CC|DEV|LOCAL)$`, 'i')
 // Compose the server
 const server = express()
 	// Remove express powered-by header
@@ -36,9 +40,14 @@ const server = express()
 		// Pass down the request
 		next()
 	})
+	// OSCC.CC
+	.use(vhost(
+		/^OSCC\.(YSYX\.)?(ORG|CC|DEV|LOCAL)$/i,
+		new Deployer('oscc').server
+	))
 	// YSYX.ORG
 	.use(vhost(
-		/^ysyx\.(org|cc|dev|local)$/i,
+		$``,
 		// Routing strategy
 		home,
 		// Static server can be either a static dist or vite dev server
@@ -52,20 +61,12 @@ const server = express()
 			: new Deployer('home', true).server
 	))
 	// DOCS
-	.use(vhost(/^docs\.ysyx\.(org|cc|dev|local)$/i, docs))
+	.use(vhost($`DOCS`, docs))
 	// FORUM
-	.use(vhost(/^forum\.ysyx\.(org|cc|dev|local)$/i, forum))
-	// SPACE
-	.use(vhost(
-		/^space\.ysyx\.(org|cc|dev|local)$/i,
-		// Session preprocessor
-		withSession(),
-		// Static file server
-		express.static(resolveDistPath('ysyx.space'))
-	))
+	.use(vhost($`FORUM`, forum))
 	// UPLOAD
 	.use(vhost(
-		/^upload\.ysyx\.(org|cc|dev|local)$/i,
+		$`UPLOAD`,
 		proxy(new Resolved('@upload', false).resolver)
 	))
 	// Uncaught request handler

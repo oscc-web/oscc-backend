@@ -36,6 +36,18 @@ export async function upload() {
 				await next()
 			}
 		},
+		'/deploy/oscc': {
+			duplicate: false,
+			replace: true,
+			privileges: [PRIV.DEPLOY_HOME],
+			maxSize: Infinity,
+			contentType: /^application\/tar\+gzip$/gi,
+			async hook(req, res, next) {
+				const { session: { userID }, url } = req
+				await Deployer.register('oscc', { userID, url })
+				await next()
+			}
+		},
 		'/deploy/home': {
 			duplicate: false,
 			replace: true,
@@ -44,7 +56,7 @@ export async function upload() {
 			contentType: /^application\/tar\+gzip$/gi,
 			async hook(req, res, next) {
 				const { session: { userID }, url } = req
-				Deployer.register('home', { userID, url })
+				await Deployer.register('home', { userID, url })
 				await next()
 			}
 		},
@@ -56,7 +68,7 @@ export async function upload() {
 			contentType: /^application\/tar\+gzip$/gi,
 			async hook(req, res, next) {
 				const { session: { userID }, url } = req
-				Deployer.register('docs', { userID, url })
+				await Deployer.register('docs', { userID, url })
 				await next()
 			}
 		}
