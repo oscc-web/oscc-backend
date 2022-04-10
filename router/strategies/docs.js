@@ -7,7 +7,7 @@ import Session from 'lib/session.js'
 import Deployer from 'lib/deployer.js'
 import pathMatch from 'lib/middleware/pathMatch.js'
 import withSession from 'lib/middleware/withSession.js'
-
+import { CustomError } from 'lib/errors.js'
 export default express().use(
 	pathMatch('/private',
 		withSession(),
@@ -20,5 +20,7 @@ export default express().use(
 				}`)
 		)
 	),
-	new Deployer('docs', true).server
+	new Deployer('docs', true).server,
+	(req, res) => res.redirect('/'),
+	CustomError.handler
 )
