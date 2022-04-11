@@ -1,6 +1,5 @@
 import express from 'express'
-import jsonwebtoken from 'jsonwebtoken'
-import { config } from 'lib/env.js'
+import { config, DOMAIN } from 'lib/env.js'
 import { PRIV } from 'lib/privileges.js'
 import Session from 'lib/session.js'
 import withSession from 'lib/middleware/withSession.js'
@@ -36,4 +35,12 @@ export async function forumPreprocessor(req, res, next) {
 export default express()
 	.use(withSession(forumPreprocessor))
 	// Forward processed traffic to real NodeBB service
-	.use(proxy(config?.port?.NodeBB || 4567))
+	.use(proxy(
+		config?.port?.NodeBB || 4567,
+		{
+			cookieFilter(str) {
+				return str
+					.replace(/path=(\w|\/)+/ig, 'Path=/')
+			}
+		}
+	))

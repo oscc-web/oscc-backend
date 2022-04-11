@@ -1,11 +1,11 @@
 // Imports
-import { resolveDistPath, config, Rx, Args } from 'lib/env.js'
+import { config, Rx, Args, DOMAIN } from 'lib/env.js'
 import logger from 'lib/logger.js'
 import express from 'express'
 // Middleware
 import vhost from 'lib/middleware/vhost.js'
 import proxy from 'lib/middleware/proxy.js'
-import withSession from 'lib/middleware/withSession.js'
+import pathMatch from 'lib/middleware/pathMatch.js'
 // Strategies
 import home from './strategies/home.js'
 import docs from './strategies/docs.js'
@@ -48,6 +48,10 @@ const server = express()
 	// YSYX.ORG
 	.use(vhost(
 		$``,
+		// FORUM
+		pathMatch('/forum/', forum),
+		// DOCS
+		pathMatch('/docs/', docs).stripped,
 		// Routing strategy
 		home,
 		// Static server can be either a static dist or vite dev server
@@ -61,9 +65,7 @@ const server = express()
 			: new Deployer('home', true).server
 	))
 	// DOCS
-	.use(vhost($`DOCS`, docs))
-	// FORUM
-	.use(vhost($`FORUM`, forum))
+	.use(vhost($`DOCS`, ({ url }, res) => res.redirect(`http://${DOMAIN}/docs${url}`)))
 	// UPLOAD
 	.use(vhost(
 		$`UPLOAD`,
