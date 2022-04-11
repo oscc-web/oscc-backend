@@ -14,7 +14,6 @@ import pathMatch from 'lib/middleware/pathMatch.js'
 import proxy from 'lib/middleware/proxy.js'
 import Resolved from 'utils/resolved.js'
 import { CustomError } from 'lib/errors.js'
-import { searchOrgs } from 'utils/searchOrgs.js'
 /**
  * Server instance
  */
@@ -26,11 +25,8 @@ const server = express()
 		if (method !== 'POST') return
 		return url
 	},
-	express.text(),
-	wrap(async (req, res, next) => {
-		let searchString = req.body
-		res.json(await searchOrgs(searchString))
-	})))
+	proxy(new Resolved('$institution').resolver)
+	))
 	// Groups View
 	.use(
 		pathMatch

@@ -5,5 +5,6 @@ export default {
 	[res('groups')]: {},
 	[res('auth')]: {},
 	[res('user')]: {},
+	[res('institution')]: {},
 	...await res.$('helper')
 }

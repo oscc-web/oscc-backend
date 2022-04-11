@@ -5,7 +5,7 @@ import { seed } from 'utils/crypto.js'
 import { sendMail } from '../../modules/mailer/lib.js'
 import statusCode from 'lib/status.code.js'
 import { ConflictEntryError, EntryNotFoundError, PrivilegeError, OperationFailedError, InvalidOperationError, ChallengeFailedError } from 'lib/errors.js'
-import { orgs, checkLocaleKey } from 'utils/searchOrgs.js'
+import { checkLocaleKey, findOrgsByID } from 'utils/searchOrgs.js'
 const appData = new AppData('user-profile'),
 	appDataWithFs = new AppDataWithFs('user-profile'),
 	/**
@@ -46,6 +46,7 @@ export async function getUserAvatar(userID, [fileID]) {
  * User ID string
  * @returns {Promise<(import('express').Response) => undefined>}
  * The handler function to send the response
+ * @throws {EntryNotFoundError}
  */
 export async function viewUserProfile(currentUser = new GuestUser, userID) {
 	const targetUser = await User.locate(userID)
@@ -194,11 +195,12 @@ export async function updateInstitution(userID, body) {
 			`update User <${userID}>'s institution, ID is not valid`
 		)
 		ID = ID.trim().toLowerCase()
-		if (!orgs[ID]) throw new EntryNotFoundError(
+		let result = await findOrgsByID(ID)
+		if (!result) throw new EntryNotFoundError(
 			`institution ID: <${ID}>`,
 			{ userID }
 		)
-		await updateUserInstitution(userID, orgs[ID])
+		await updateUserInstitution(userID, result)
 	}
 	return successful
 }
@@ -238,6 +240,9 @@ async function getRawUserProfile(userID) {
  * @returns {Promise<import('mongodb').InsertOneResult | Promise<import('mongodb').UpdateResult>}
  */
 async function updateUserInstitution(userID, institution) {
+	institution = await findOrgsByID(institution.ID)
+		? await findOrgsByID(institution.ID)
+		: institution
 	return await appData.store({ userID },
 		{ ...await getRawUserProfile(userID), institution },
 		{ replace: true }

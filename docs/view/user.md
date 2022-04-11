@@ -21,7 +21,12 @@ response = {
 	// User's institution
 	// Visible to: 
 	// - all users
-	institution: String | undefined,
+	institution: {
+		// Domain name of institution
+		ID: String
+		// Name of institution
+		name: String | Object 
+	}
 	// User's description of him/herself
 	signature: String | undefined,
 	// List of groups that the target user is in,
@@ -32,11 +37,10 @@ response = {
         // Group name
         name: String,
     }]
-
-}
+} | 'EntryNotFoundError'
 ```
 
-## POST  `/user/:userID/updateProfile` - `String`
+## POST  `/user/:userID/update-profile` - `String`
 
 Update information of User &lt;userID&gt;.
 User's information can be updated only by this user.
@@ -44,8 +48,6 @@ User's information can be updated only by this user.
 request = {
 	// User name
 	name: String | undefined,
-	// User's institution
-	institution: String | undefined,
 	// User preference setting
 	setting: {
 		// User's locale
@@ -54,20 +56,24 @@ request = {
 		// 1 for only accepting notifications about me
 		// 2 for refusing all notifications
 		notification: 0 | 1 | 2
-	} | undefined
+	} | undefined,
+	// User's description of him/herself
+	signature: String | undefined
 }
 // The result of operation is indicated by response code.
 response = ''
 	// Demo error
-	| '[0] This is a demo error message'
-	| '[1] Privilege denied'
-
+	| 'NotFound'
 ```
 
 ## GET `/user/:userID/avatar` - `Buffer`
-Returns the buffer of this user's avatar
+Returns the buffer of this user's 
+```js
+response: Buffer | 'NotFound'
 
-## POST `/user/:userID/updateMail`
+```
+
+## POST `/user/:userID/update-mail`
 
 Update mail of User &lt;userID&gt;.
 User's mail can be updated only by this user.
@@ -77,7 +83,7 @@ request = {
 	// password and new mail is required
 	// When action is update,
 	// new mail and token is required
-	action: 'VALIDATE' | 'UPDATE'
+	action: 'CHALLENGE' | 'UPDATE'
 	// User's password
 	password: String | undefined,
 	// User's new mail
@@ -88,11 +94,12 @@ request = {
 // The result of operation is indicated by response code.
 response = ''
 	// Demo error
-	| '[0] This is a demo error message'
-	| '[1] Privilege denied'
-
+	| 'ChallengeFailedError'
+	| 'ConflictEntryError'
+	| 'OperationFailedError'
+	| 'InvalidOperationError'
 ```
-## POST `/user/:userID/updatePassword`
+## POST `/user/:userID/update-password`
 
 Update password of User &lt;userID&gt;.
 User's password can be updated only by this user.
@@ -106,7 +113,27 @@ request = {
 // The result of operation is indicated by response code.
 response = ''
 	// Demo error
-	| '[0] This is a demo error message'
-	| '[1] Privilege denied'
+	| 'ChallengeFailedError'
+	| 'OperationFailedError'
+```
+## POST `/user/:userID/institution`
 
+Update institution of User &lt;userID&gt;.
+User's institution can be updated only by this user.
+```js
+request = {
+	// If user can not find his/her institution in the list,
+	// he/she can override it.
+	override: Boolean,
+	// If override is true, ID need not to be given.
+	// If override is false, institution's ID must be given
+	ID: String,
+	// Name of institution
+	name: String | Object
+}
+// The result of operation is indicated by response code.
+response = ''
+	// Demo error
+	| 'InvalidOperationError'
+	| 'EntryNotFoundError'
 ```
