@@ -16,6 +16,7 @@ import { PROJECT_ROOT } from 'lib/env.js'
 import wrap, { setFunctionName } from 'utils/wrapAsync.js'
 import Process from './Process.js'
 import * as daemon from '../index.js'
+import { ObjectId } from 'mongodb'
 // REPL Prompt
 const prompt = ['ysyx'.yellow, '>'.dim, ''].join(' ')
 // REPL Readonly Context
@@ -23,14 +24,17 @@ const context = {
 	PRIV,
 	PRIV_LUT,
 	daemon,
-	Session,
-	User,
-	guest: { GuestUser },
-	Group,
-	AppData,
-	AppDataWithFs,
-	consoleTransport,
-	Process,
+	ysyx: {
+		Session,
+		User,
+		GuestUser,
+		Group,
+		AppData,
+		AppDataWithFs,
+		consoleTransport,
+		Process,
+	},
+	mongo: { ObjectId },
 	db: dbInit('user/CRUD', 'session/CRUD', 'groups/CRUD', 'appData/CRUD', 'log/CRUD'),
 	hash,
 	wrap,

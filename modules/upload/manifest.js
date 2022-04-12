@@ -16,6 +16,7 @@ export async function upload() {
 				const { session: { userID } } = req
 				await userProfile.acquireFile(
 					{ userID, url: '/avatar' },
+					undefined,
 					{ replace: true }
 				)
 				await next()
@@ -31,6 +32,7 @@ export async function upload() {
 				const { session: { userID } } = req
 				await userProfile.acquireFile(
 					{ userID, url: '/resume' },
+					undefined,
 					{ replace: true }
 				)
 				await next()
