@@ -1,7 +1,7 @@
 import 'colors'
 import repl, { REPL_MODE_SLOPPY } from 'repl'
 import Session from 'lib/session.js'
-import User from 'lib/user.js'
+import User, { GuestUser } from 'lib/user.js'
 import Group from 'lib/groups.js'
 import { AppData } from 'lib/appData.js'
 import { AppDataWithFs } from 'lib/appDataWithFs.js'
@@ -25,6 +25,7 @@ const context = {
 	daemon,
 	Session,
 	User,
+	guest: { GuestUser },
 	Group,
 	AppData,
 	AppDataWithFs,

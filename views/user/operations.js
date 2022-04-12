@@ -4,8 +4,10 @@ import { AppDataWithFs } from 'lib/appDataWithFs.js'
 import { seed } from 'utils/crypto.js'
 import { sendMail } from '../../modules/mailer/lib.js'
 import statusCode from 'lib/status.code.js'
-import { ConflictEntryError, EntryNotFoundError, PrivilegeError, OperationFailedError, InvalidOperationError, ChallengeFailedError } from 'lib/errors.js'
 import { checkLocaleKey, findOrgsByID } from 'utils/searchOrgs.js'
+import { ConflictEntryError, EntryNotFoundError, PrivilegeError, OperationFailedError, InvalidOperationError, ChallengeFailedError, BadRequestError } from 'lib/errors.js'
+import { PRIV } from 'lib/privileges.js'
+import Group from 'lib/groups.js'
 const appData = new AppData('user-profile'),
 	appDataWithFs = new AppDataWithFs('user-profile'),
 	/**
@@ -53,17 +55,29 @@ export async function viewUserProfile(currentUser = new GuestUser, userID) {
 	if (!(targetUser instanceof User)) throw new EntryNotFoundError(
 		`User <${userID}>`, { currentUser }
 	)
-	let content = await getRawUserProfile(userID),
-		userProfile = { ...content, name: targetUser.name }
+	const profile = await getRawUserProfile(userID),
+		PRIV_ALTER_USER_INFO = await currentUser.hasPriv(PRIV.ALTER_USER_INFO),
+		isSameUser = currentUser.userID === userID,
+		{ name } = targetUser,
+		editable = {
+			name: isSameUser || PRIV_ALTER_USER_INFO,
+			mail: isSameUser || PRIV_ALTER_USER_INFO,
+			inst: isSameUser || PRIV_ALTER_USER_INFO,
+			avatar: isSameUser || PRIV_ALTER_USER_INFO,
+			groups: await currentUser.hasPriv(PRIV.ALTER_USER_GROUP),
+			preferences: isSameUser || PRIV_ALTER_USER_INFO
+		}
 	// Check if mail is visible
-	if (currentUser.hasPriv('VIEW_USER_EMAIL') || content.mailVisibility) {
-		userProfile.mail = targetUser.mail
+	if (
+		await currentUser.hasPriv(PRIV.VIEW_USER_EMAIL)
+		|| profile.mailVisibility
+		|| editable.mail
+	) {
+		profile.mail = targetUser.mail
 	}
 	// Check if groups is visible
-	userProfile.groups = (await currentUser.viewGroups(targetUser)).map(
-		({ id, name }) => ({ id, name })
-	)
-	return userProfile
+	const groups = (await currentUser.viewGroups(targetUser)).map(({ id, name }) => ({ id, name }))
+	return { ...profile, editable, groups, name }
 }
 /**
  * @param {User} user
@@ -96,11 +110,12 @@ export async function updateMail(user, body) {
 			const token = seed(6)
 			let { acknowledged } = await appData.store({ mail, action: 'validate-mail' }, { token }, { replace: true })
 			if (acknowledged) {
-				const link = `/settings/update-mail?token=${token}&mail=${Buffer.from(mail).toString('base64')}`
+				const link = `/actions/reset-mail/${userID}?token=${token}&mail=${Buffer.from(mail).toString('base64')}&userID=`,
+					{ userID, name } = user
 				// 'sendMail()' may throw error on failed IPC call.
 				// This will be handled as internal server error,
 				// and the details should not be sent to client.
-				await sendMail(mail, 'validateEmailChange', { link })
+				await sendMail(mail, 'resetEmail', { link, userID, name })
 			} else throw new OperationFailedError(
 				`save mail '${mail}' and token '${token}' to tmpAppData`,
 				{ user }
@@ -202,6 +217,39 @@ export async function updateInstitution(userID, body) {
 		)
 		await updateUserInstitution(userID, result)
 	}
+}
+/**
+ * @param {User} operatingUser
+ * The user making this request
+ * @param {User} targetUser
+ * The user to be updated
+ * @param {{
+ * add: String[],
+ * sub: String[]
+ * }} body
+ * Update payload
+ * @returns {(import('express').Response) => undefined}
+ * The handler function to send the response
+ */
+export async function updateGroups(operatingUser, targetUser, { add = [], sub = [] } = {}) {
+	const groups = await Promise.all([...add, ...sub].map(
+		async groupID => await Group.locate(groupID) || groupID
+	))
+	// Check if user has sufficient privileges
+	for (const group of groups) {
+		if (!(group instanceof Group)) throw EntryNotFoundError(
+			`Group <${group}>`,
+			{ user: operatingUser }
+		)
+		if (!group.challenge(operatingUser)) throw new PrivilegeError(
+			`update groups of ${targetUser}`, { user: operatingUser }
+		)
+	}
+	// Do the update
+	await targetUser.update({ $push: { groups: { $each: add } } })
+	for (const groupID of sub) {
+		await targetUser.update({ $pull: { groups: groupID } })
+	}
 	return successful
 }
 /**
@@ -228,6 +276,7 @@ async function challengeUpdateMailPayload(mail, token) {
 async function getRawUserProfile(userID) {
 	return {
 		mailVisibility: false,
+		instVisibility: false,
 		...await appData.load({ userID }) || {}
 	}
 }

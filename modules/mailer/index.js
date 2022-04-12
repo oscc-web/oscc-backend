@@ -40,7 +40,11 @@ const server = express()
 		}
 		let subject, html
 		try {
-			({ subject, html } = render(template, args))
+			({ subject, html } = render(template, {
+				to: encodeURIComponent(to),
+				DOMAIN,
+				...args
+			}))
 		} catch (error) {
 			logger.warn(error.stack)
 			res.status(statusCode.ClientError.BadRequest).end()
@@ -102,8 +106,7 @@ function render(templateName, args) {
 						return {
 							templateCss,
 							indexCss,
-							html: soda(
-								templateHtml, { DOMAIN, ...args })
+							html: soda(templateHtml, args)
 						}[entry]
 					}
 				)

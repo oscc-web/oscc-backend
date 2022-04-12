@@ -9,36 +9,51 @@ import pathMatch from 'lib/middleware/pathMatch.js'
 import statusCode from 'lib/status.code.js'
 import Resolved from 'utils/resolved.js'
 import wrap from 'utils/wrapAsync.js'
-import { viewUserProfile, updateMail, getUserAvatar, updateUserPassword, updateUserProfile, updateInstitution } from './operations.js'
+import { viewUserProfile, updateMail, getUserAvatar, updateUserPassword, updateUserProfile, updateGroups, updateInstitution } from './operations.js'
+import User from 'lib/user.js'
 const server = express()
 	.use(
 		withSession(),
 		express.json(),
 		wrap(async (req, res) => {
-			const { url, body } = req, user = await req.session?.user
-			const [userID, action = '', ...search] = url.split(/\/|\?|&/gi).splice(1)
-			logger.debug(`${user} requesting ${JSON.stringify({ action, userID })}`)
+			const { url, body } = req, operatingUser = await req.session?.user,
+				[userID, action = '', ...search] = url.split(/\/|\?|&/gi).splice(1),
+				targetUser = await User.locate(userID)
+			logger.debug(`${
+				operatingUser || 'GuestUser <>'
+			} requesting ${
+				JSON.stringify({ action, userID })
+			}`)
 			switch (action.toLowerCase()) {
 				case '':
-					res.json(await viewUserProfile(user, userID))
+					res.json(await viewUserProfile(operatingUser, userID))
 					break
-				case 'update-profile':
-					(await updateUserProfile(user, body))(res)
+				case 'profile':
+					(await updateUserProfile(operatingUser, body))(res)
 					break
-				case 'update-mail':
-					(await updateMail(user, body))(res)
+				case 'mail':
+					(await updateMail(operatingUser, body))(res)
 					break
-				case 'update-password':
-					(await updateUserPassword(user, body))(res)
+				case 'password':
+					(await updateUserPassword(operatingUser, body))(res)
+					break
+				case 'groups':
+					(await updateGroups(operatingUser, targetUser, body))(res)
 					break
 				case 'avatar':
 					(await getUserAvatar(userID, search))(res)
 					break
 				case 'institution':
-					(await updateInstitution(user.userID, body))(res)
+					(await updateInstitution(targetUser.userID, body))(res)
 					break
 				default:
-					throw new InvalidOperationError(action, { user, url })
+					throw new InvalidOperationError(
+						action,
+						{
+							user: operatingUser,
+							url
+						}
+					)
 			}
 		}, 'userRequestRouter'),
 		// Uncaught request handler

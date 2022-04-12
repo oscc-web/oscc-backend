@@ -1,14 +1,4 @@
 import express from 'express'
-import bodyParser from 'body-parser'
-import User from 'lib/user.js'
-import logger from 'lib/logger.js'
-import statusCode from 'lib/status.code.js'
-import { config, Rx } from 'lib/env.js'
-import { AppData } from 'lib/appData.js'
-import { seed } from 'utils/crypto.js'
-import { sendMail } from '../../modules/mailer/lib.js'
-import wrap from 'utils/wrapAsync.js'
-import withSession from 'lib/middleware/withSession.js'
 import conditional from 'lib/middleware/conditional.js'
 import pathMatch from 'lib/middleware/pathMatch.js'
 import proxy from 'lib/middleware/proxy.js'
@@ -36,7 +26,7 @@ const server = express()
 	// User View
 	.use(conditional(
 		({ method, url }) => {
-			const [prefix, userID, action, ...segments] = url.split('/').splice(1)
+			const [prefix, userID, action = '', ...segments] = url.split('/').splice(1)
 			if (prefix !== 'user' || !userID) return
 			if (method !== 'POST' && !action.startsWith('avatar')) return
 			return { url: ['', userID, action, ...segments].join('/') }

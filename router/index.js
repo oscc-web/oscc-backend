@@ -1,20 +1,25 @@
 // Imports
-import { resolveDistPath, config, Rx, Args } from 'lib/env.js'
+import { config, Rx, Args, DOMAIN } from 'lib/env.js'
 import logger from 'lib/logger.js'
 import express from 'express'
 // Middleware
 import vhost from 'lib/middleware/vhost.js'
 import proxy from 'lib/middleware/proxy.js'
-import withSession from 'lib/middleware/withSession.js'
+import pathMatch from 'lib/middleware/pathMatch.js'
 // Strategies
 import home from './strategies/home.js'
 import docs from './strategies/docs.js'
 import forum from './strategies/forum.js'
 // Libraries
 import statusCode from 'lib/status.code.js'
+import Deployer from 'lib/deployer.js'
+import { CustomError } from 'lib/errors.js'
 import Resolved from 'utils/resolved.js'
 import { WebsocketResponse } from 'utils/wsResponse.js'
-import { CustomError } from 'lib/errors.js'
+// Server regexp composer
+const $ = ([str]) => new RegExp(`^${
+	str && `${str}\\.` || ''
+}YSYX\\.(OSCC\\.)?(ORG|CC|DEV|LOCAL)$`, 'i')
 // Compose the server
 const server = express()
 	// Remove express powered-by header
@@ -35,9 +40,18 @@ const server = express()
 		// Pass down the request
 		next()
 	})
+	// OSCC.CC
+	.use(vhost(
+		/^OSCC\.(YSYX\.)?(ORG|CC|DEV|LOCAL)$/i,
+		new Deployer('oscc').server
+	))
 	// YSYX.ORG
 	.use(vhost(
-		/^ysyx\.(org|cc|dev|local)$/i,
+		$``,
+		// FORUM
+		pathMatch('/forum/', forum),
+		// DOCS
+		pathMatch('/docs/', docs).stripped,
 		// Routing strategy
 		home,
 		// Static server can be either a static dist or vite dev server
@@ -48,40 +62,13 @@ const server = express()
 				return proxy(config.devProxy['@'])
 			})()
 			// Static file server
-			// eslint-disable-next-line spellcheck/spell-checker
-			: express.static(resolveDistPath('ysyx')),
-		// Serve index.html
-		async (req, res, next) => {
-			try {
-				return await new Promise((resolve, reject) => {
-					res.sendFile(
-						'./index.html',
-						{ root: resolveDistPath('ysyx') },
-						e => {
-							if (e instanceof Error) reject(e)
-							else resolve()
-						})
-				})
-			} catch (e) {
-				next(e)
-			}
-		}
+			: new Deployer('home', true).server
 	))
 	// DOCS
-	.use(vhost(/^docs\.ysyx\.(org|cc|dev|local)$/i, docs))
-	// FORUM
-	.use(vhost(/^forum\.ysyx\.(org|cc|dev|local)$/i, forum))
-	// SPACE
-	.use(vhost(
-		/^space\.ysyx\.(org|cc|dev|local)$/i,
-		// Session preprocessor
-		withSession(),
-		// Static file server
-		express.static(resolveDistPath('ysyx.space'))
-	))
+	.use(vhost($`DOCS`, ({ url }, res) => res.redirect(`http://${DOMAIN}/docs${url}`)))
 	// UPLOAD
 	.use(vhost(
-		/^upload\.ysyx\.(org|cc|dev|local)$/i,
+		$`UPLOAD`,
 		proxy(new Resolved('@upload', false).resolver)
 	))
 	// Uncaught request handler

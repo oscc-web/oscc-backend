@@ -1,0 +1,29 @@
+---
+账号邮箱换绑验证
+---
+<div class="wrapper">
+	<div class="mail-header">
+		<img src="https://{{DOMAIN}}/common/res/logo/line.white.png?action=reset-mail&mail={{to}}"
+			style="height: 1em; max-width: 5em; aspect-ratio: auto;" />
+		<div>账号邮箱换绑验证</div>
+	</div>
+	<div class="mail-body next-level">
+		<div style="display: block;">
+			<p>{{name}}, 您好</p>
+			<p>您正在将此邮箱 ({{to}}) 绑定到一生一芯用户 {{userID}}</p>
+			<p>请点击下方链接完成邮箱绑定</p>
+		</div>
+		<div style="margin-bottom: 0.6rem;">
+			<a class="button" href="http://{{DOMAIN}}{{link}}">完成注册</a>
+		</div>
+		<div style="margin-top: 0.5rem;">
+			<a style="color: #888; font-size: 0.8em;" href="http://{{DOMAIN}}{{link}}">
+				http://{{DOMAIN}}{{link}}
+			</a>
+		</div>
+		<div class="next-level" style="color: #888; font-size: 0.8em; display: block;">
+			<p><b>我为什么会收到这封邮件？</b></p>
+			<p>该邮件是“一生一芯”账号邮箱绑定的确认邮件，如果您近期没有绑定该邮箱到“一生一芯”账号的行为，请直接忽略该邮件。</p>
+		</div>
+	</div>
+</div>
