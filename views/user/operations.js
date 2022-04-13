@@ -24,10 +24,12 @@ const appData = new AppData('user-profile'),
  *
  * @param {String} userID
  * ID of the avatar owner
+ * @param {String} [fileID]
+ * ID of the avatar file
  * @returns {Promise<(import('express').Response) => undefined>}
  * The handler function to send the response
  */
-export async function getUserAvatar(userID, [fileID]) {
+export async function getAvatar(userID, [fileID]) {
 	const fd = await appDataWithFs.loadFile({ userID, url: '/avatar' })
 	// No avatar belongs to the userID
 	if (!fd) return notFound
@@ -80,21 +82,20 @@ export async function viewUserProfile(currentUser = new GuestUser, userID) {
 	return { ...profile, editable, groups, name }
 }
 /**
+ * @param {{
+ * action: 'CHALLENGE' | 'UPDATE',
+ * password: String | undefined,
+ * token: String | undefined,
+ * mail: String
+ * }} body
  * @param {User} user
  * The user making this request
- * @param {Object} body
- * request payload
  * @returns {Promise<(import('express').Response) => undefined>}
  * The handler function to send the response
  * @throws {ChallengeFailedError|ConflictEntryError|OperationFailedError|InvalidOperationError}
  */
-export async function updateMail(user, body) {
-	const {
-			action,
-			password,
-			token
-		} = body,
-		mail = body.mail.toLowerCase()
+export async function updateMail({ action, password, token, mail }, user) {
+	mail = mail.toLowerCase()
 	switch (action) {
 		case 'CHALLENGE': {
 			// Challenge user password
@@ -110,8 +111,8 @@ export async function updateMail(user, body) {
 			const token = seed(6)
 			let { acknowledged } = await appData.store({ mail, action: 'validate-mail' }, { token }, { replace: true })
 			if (acknowledged) {
-				const link = `/actions/reset-mail/${userID}?token=${token}&mail=${Buffer.from(mail).toString('base64')}&userID=`,
-					{ userID, name } = user
+				const { userID, name } = user,
+					link = `/actions/reset-mail/${userID}?token=${token}&mail=${Buffer.from(mail).toString('base64')}&userID=`
 				// 'sendMail()' may throw error on failed IPC call.
 				// This will be handled as internal server error,
 				// and the details should not be sent to client.
@@ -139,39 +140,40 @@ export async function updateMail(user, body) {
 	}
 }
 /**
- *
+ * @param {{
+ * name: String | undefined
+ * profile: Object
+ * }} body
  * @param {User} user
  * The user making this request
- * @param {Object} body
- * Update payload
  * @returns {Promise<(import('express').Response) => undefined>}
  * The handler function to send the response
  */
-export async function updateUserProfile(user, body) {
-	if (body?.name) {
-		user.name = body.name
+export async function updateProfile({ name, ...profile }, user) {
+	if (name) {
+		user.name = name
 		await user.update()
-		delete body.name
 	}
+	delete profile.institution
 	// Expects OperationFailedError thrown from appData.store
 	await appData.store({ userID: user.userID },
-		{ ...await getRawUserProfile(user.userID), ...body },
+		{ ...await getRawUserProfile(user.userID), ...profile },
 		{ replace: true }
 	)
 	return successful
 }
 /**
- *
+ * @param {{
+ * oldPassword: String,
+ * newPassword: String
+ * }} body
  * @param {User} user
  * The user making this request
- * @param {Object} body
- * Update payload
  * @returns {Promise<(import('express').Response) => undefined>}
  * The handler function to send the response
  * @throws {ChallengeFailedError|OperationFailedError}
  */
-export async function updateUserPassword(user, body) {
-	const { oldPassword, newPassword } = body
+export async function updatePassword({ oldPassword, newPassword }, user) {
 	if (!await user.login(oldPassword)) throw new ChallengeFailedError(
 		'challenge own password', { user }
 	)
@@ -184,16 +186,16 @@ export async function updateUserPassword(user, body) {
 	return successful
 }
 /**
- *
+ * @param {{
+ * override: Boolean,
+ * ID: String | undefined,
+ * name: String | Object | undefined
+ * }} body
  * @param {String} userID
- * The ID of user making this request
- * @param {Object} body
- * Update payload
  * @returns {Promise<(import('express').Response) => undefined>}
  * @throws {InvalidOperationError|EntryNotFoundError}
  */
-export async function updateInstitution(userID, body) {
-	let { override, ID, name } = body
+export async function updateInstitution({ override, ID, name }, userID) {
 	// Override is true
 	if (override) {
 		// Check name and update user's institution
@@ -206,7 +208,7 @@ export async function updateInstitution(userID, body) {
 		)
 	// Override is false
 	} else {
-		if (!ID && typeof ID === 'string') throw new InvalidOperationError(
+		if (!ID && typeof ID !== 'string') throw new InvalidOperationError(
 			`update User <${userID}>'s institution, ID is not valid`
 		)
 		ID = ID.trim().toLowerCase()
@@ -217,6 +219,7 @@ export async function updateInstitution(userID, body) {
 		)
 		await updateUserInstitution(userID, result)
 	}
+	return successful
 }
 /**
  * @param {User} operatingUser

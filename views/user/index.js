@@ -1,5 +1,5 @@
 // Environmental setup
-import { CustomError, InvalidOperationError } from 'lib/errors.js'
+import { CustomError, InvalidOperationError, PrivilegeError } from 'lib/errors.js'
 import logger from 'lib/logger.js'
 import express from 'express'
 // Middleware
@@ -9,8 +9,18 @@ import pathMatch from 'lib/middleware/pathMatch.js'
 import statusCode from 'lib/status.code.js'
 import Resolved from 'utils/resolved.js'
 import wrap from 'utils/wrapAsync.js'
-import { viewUserProfile, updateMail, getUserAvatar, updateUserPassword, updateUserProfile, updateGroups, updateInstitution } from './operations.js'
+import { viewUserProfile, updateMail, getAvatar, updatePassword, updateProfile, updateGroups, updateInstitution } from './operations.js'
 import User from 'lib/user.js'
+/**
+ *
+ * @param {User} operatingUser
+ * @param {User} targetUser
+ */
+async function checkSelf(operatingUser, targetUser){
+	if (!operatingUser || !targetUser || operatingUser.userID !== targetUser.userID) throw new PrivilegeError(
+		'Alter other\'s profile',
+	)
+}
 const server = express()
 	.use(
 		withSession(),
@@ -26,25 +36,29 @@ const server = express()
 			}`)
 			switch (action.toLowerCase()) {
 				case '':
-					res.json(await viewUserProfile(operatingUser, userID))
+					res.json(await viewUserProfile(targetUser, userID))
 					break
 				case 'profile':
-					(await updateUserProfile(operatingUser, body))(res)
+					await checkSelf(operatingUser, targetUser);
+					(await updateProfile(body, targetUser))(res)
 					break
 				case 'mail':
-					(await updateMail(operatingUser, body))(res)
+					await checkSelf(operatingUser, targetUser);
+					(await updateMail(body, targetUser))(res)
 					break
 				case 'password':
-					(await updateUserPassword(operatingUser, body))(res)
+					await checkSelf(operatingUser, targetUser);
+					(await updatePassword(body, targetUser))(res)
 					break
 				case 'groups':
 					(await updateGroups(operatingUser, targetUser, body))(res)
 					break
 				case 'avatar':
-					(await getUserAvatar(userID, search))(res)
+					(await getAvatar(userID, search))(res)
 					break
 				case 'institution':
-					(await updateInstitution(targetUser.userID, body))(res)
+					await checkSelf(operatingUser, targetUser);
+					(await updateInstitution(body, userID))(res)
 					break
 				default:
 					throw new InvalidOperationError(

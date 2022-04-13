@@ -94,5 +94,5 @@ export async function checkLocaleKey(name) {
 export async function findOrgsByID(_id) {
 	if (!_id) return null
 	const db = dbInit('orgs/r')
-	return await (await db.orgs.find({ _id })).toArray()
+	return (await (await db.orgs.find({ _id })).toArray())[0]
 }
