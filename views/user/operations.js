@@ -88,30 +88,37 @@ export async function viewUserProfile(currentUser = new GuestUser, userID) {
  * token: String | undefined,
  * mail: String
  * }} body
- * @param {User} user
+ * @param {User} operatingUser
  * The user making this request
+ * @param {User} targetUser
  * @returns {Promise<(import('express').Response) => undefined>}
  * The handler function to send the response
  * @throws {ChallengeFailedError|ConflictEntryError|OperationFailedError|InvalidOperationError}
  */
-export async function updateMail({ action, password, token, mail }, user) {
+export async function updateMail({ action, password, token, mail }, operatingUser, targetUser) {
+	if (operatingUser.userID !== targetUser.userID){
+		throw new PrivilegeError(
+			'update other\'s mail',
+			{ operatingUser }
+		)
+	}
 	mail = mail.toLowerCase()
 	switch (action) {
 		case 'CHALLENGE': {
 			// Challenge user password
-			if (!await user.login(password)) throw new ChallengeFailedError(
-				'challenge own password', { user }
+			if (!await targetUser.login(password)) throw new ChallengeFailedError(
+				'challenge own password', { targetUser }
 			)
 			// Check if mail has already been used/registered
 			const existingUser = await User.locate(mail)
 			if (existingUser instanceof User) throw new ConflictEntryError(
-				existingUser, `User <${mail}>`, { user }
+				existingUser, `User <${mail}>`, { targetUser }
 			)
 			// Generate one-time token for mail validation
 			const token = seed(6)
 			let { acknowledged } = await appData.store({ mail, action: 'validate-mail' }, { token }, { replace: true })
 			if (acknowledged) {
-				const { userID, name } = user,
+				const { userID, name } = targetUser,
 					link = `/actions/reset-mail/${userID}?token=${token}&mail=${Buffer.from(mail).toString('base64')}&userID=`
 				// 'sendMail()' may throw error on failed IPC call.
 				// This will be handled as internal server error,
@@ -119,24 +126,24 @@ export async function updateMail({ action, password, token, mail }, user) {
 				await sendMail(mail, 'resetEmail', { link, userID, name })
 			} else throw new OperationFailedError(
 				`save mail '${mail}' and token '${token}' to tmpAppData`,
-				{ user }
+				{ targetUser }
 			)
 			return successful
 		}
 		case 'UPDATE': {
 			await challengeUpdateMailPayload(mail, token)
 			// Update user's mail record
-			user.mail = mail
+			targetUser.mail = mail
 			// Check if mail has been updated correctly
-			if (await user.mail !== mail) throw new OperationFailedError(
-				`update mail from ${user.mail} to ${mail}`, { user }
+			if (await targetUser.mail !== mail) throw new OperationFailedError(
+				`update mail from ${targetUser.mail} to ${mail}`, { targetUser }
 			)
 			// Remove challenge record
 			await appData.delete({ mail, action: 'validate-mail' })
 			return successful
 		}
 		default:
-			throw new InvalidOperationError(action, { user })
+			throw new InvalidOperationError(action, { targetUser })
 	}
 }
 /**
@@ -144,20 +151,27 @@ export async function updateMail({ action, password, token, mail }, user) {
  * name: String | undefined
  * profile: Object
  * }} body
- * @param {User} user
+ * @param {User} operatingUser
  * The user making this request
+ * @param {User} targetUser
  * @returns {Promise<(import('express').Response) => undefined>}
  * The handler function to send the response
  */
-export async function updateProfile({ name, ...profile }, user) {
+export async function updateProfile({ name, ...profile }, operatingUser, targetUser) {
+	if (operatingUser.userID !== targetUser.userID || !operatingUser.hasPriv('ALTER_USER_INFO')){
+		throw new PrivilegeError(
+			'update other\'s profile',
+			{ operatingUser }
+		)
+	}
 	if (name) {
-		user.name = name
-		await user.update()
+		targetUser.name = name
+		await targetUser.update()
 	}
 	delete profile.institution
 	// Expects OperationFailedError thrown from appData.store
-	await appData.store({ userID: user.userID },
-		{ ...await getRawUserProfile(user.userID), ...profile },
+	await appData.store({ userID: targetUser.userID },
+		{ ...await getRawUserProfile(targetUser.userID), ...profile },
 		{ replace: true }
 	)
 	return successful
@@ -173,15 +187,21 @@ export async function updateProfile({ name, ...profile }, user) {
  * The handler function to send the response
  * @throws {ChallengeFailedError|OperationFailedError}
  */
-export async function updatePassword({ oldPassword, newPassword }, user) {
-	if (!await user.login(oldPassword)) throw new ChallengeFailedError(
-		'challenge own password', { user }
+export async function updatePassword({ oldPassword, newPassword }, operatingUser, targetUser) {
+	if (operatingUser.userID !== targetUser.userID) {
+		throw new PrivilegeError(
+			'update other\'s password',
+			{ operatingUser }
+		)
+	}
+	if (!await targetUser.login(oldPassword)) throw new ChallengeFailedError(
+		'challenge own password', { targetUser }
 	)
 	// Update user password, db update will be automatically triggered
-	user.password = newPassword
+	targetUser.password = newPassword
 	// Check if uew password takes effect
-	if (!await user.login(newPassword)) throw new OperationFailedError(
-		'update own password', { user }
+	if (!await targetUser.login(newPassword)) throw new OperationFailedError(
+		'update own password', { targetUser }
 	)
 	return successful
 }
@@ -191,33 +211,41 @@ export async function updatePassword({ oldPassword, newPassword }, user) {
  * ID: String | undefined,
  * name: String | Object | undefined
  * }} body
- * @param {String} userID
+ * @param {User} operatingUser
+ * The user making this request
+ * @param {User} targetUser
  * @returns {Promise<(import('express').Response) => undefined>}
  * @throws {InvalidOperationError|EntryNotFoundError}
  */
-export async function updateInstitution({ override, ID, name }, userID) {
+export async function updateInstitution({ override, ID, name }, operatingUser, targetUser) {
+	if (operatingUser.userID !== targetUser.userID){
+		throw new PrivilegeError(
+			'update other\'s institution',
+			{ operatingUser }
+		)
+	}
 	// Override is true
 	if (override) {
 		// Check name and update user's institution
 		if (name = await checkLocaleKey(name)) {
-			await updateUserInstitution(userID, { ID, name })
+			await updateUserInstitution(targetUser.userID, { ID, name })
 		// Name is invalid
 		} else throw new InvalidOperationError(
 			`check name ${name}`,
-			userID
+			targetUser.userID
 		)
 	// Override is false
 	} else {
 		if (!ID && typeof ID !== 'string') throw new InvalidOperationError(
-			`update User <${userID}>'s institution, ID is not valid`
+			`update User ${targetUser}'s institution, ID is not valid`
 		)
 		ID = ID.trim().toLowerCase()
 		let result = await findOrgsByID(ID)
 		if (!result) throw new EntryNotFoundError(
 			`institution ID: <${ID}>`,
-			{ userID }
+			{ targetUser }
 		)
-		await updateUserInstitution(userID, result)
+		await updateUserInstitution(targetUser.userID, result)
 	}
 	return successful
 }

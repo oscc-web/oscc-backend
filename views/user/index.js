@@ -16,11 +16,6 @@ import User from 'lib/user.js'
  * @param {User} operatingUser
  * @param {User} targetUser
  */
-async function checkSelf(operatingUser, targetUser){
-	if (!operatingUser || !targetUser || operatingUser.userID !== targetUser.userID) throw new PrivilegeError(
-		'Alter other\'s profile',
-	)
-}
 const server = express()
 	.use(
 		withSession(),
@@ -39,16 +34,13 @@ const server = express()
 					res.json(await viewUserProfile(targetUser, userID))
 					break
 				case 'profile':
-					await checkSelf(operatingUser, targetUser);
-					(await updateProfile(body, targetUser))(res)
+					(await updateProfile(body, operatingUser, targetUser))(res)
 					break
 				case 'mail':
-					await checkSelf(operatingUser, targetUser);
-					(await updateMail(body, targetUser))(res)
+					(await updateMail(body, operatingUser, targetUser))(res)
 					break
 				case 'password':
-					await checkSelf(operatingUser, targetUser);
-					(await updatePassword(body, targetUser))(res)
+					(await updatePassword(body, operatingUser, targetUser))(res)
 					break
 				case 'groups':
 					(await updateGroups(operatingUser, targetUser, body))(res)
@@ -57,8 +49,7 @@ const server = express()
 					(await getAvatar(userID, search))(res)
 					break
 				case 'institution':
-					await checkSelf(operatingUser, targetUser);
-					(await updateInstitution(body, userID))(res)
+					(await updateInstitution(body, operatingUser, userID))(res)
 					break
 				default:
 					throw new InvalidOperationError(
