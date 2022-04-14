@@ -1,7 +1,7 @@
-import { PROJECT_ROOT } from 'lib/env.js'
+import { PROJECT_ROOT, TODO } from 'lib/env.js'
 import { readFileSync, writeFileSync } from 'fs'
 import dbInit from './mongo.js'
-import { strDistance } from './strDistance.js'
+import { strDistance } from './string.js'
 const path = `${PROJECT_ROOT}/var/orgList.json`
 let orgs = JSON.parse(readFileSync(path))
 export async function loadOrgs() {
@@ -31,12 +31,22 @@ export async function searchOrgs(searchString) {
 	searchString = searchString.trim().toLowerCase()
 	return Object
 		.entries(orgs)
-		.map(([ID, el]) => ({ ID, ...el }))
+		.map(([ID, el]) => ({
+			ID,
+			...el,
+			score: {
+				included: getScore(ID, searchString).included || getScore(el.name, searchString).included,
+				distance: Math.min(getScore(ID, searchString).distance, getScore(el.name, searchString).distance)
+			}
+		}))
 		.filter(org =>
-			Math.min(getScore(org.ID, searchString), getScore(org.name, searchString)) < 50
-		).sort((orgA, orgB) =>
-			Math.min(getScore(orgA.ID, searchString), getScore(orgA.name, searchString)) - Math.min(getScore(orgB.ID, searchString), getScore(orgB.name, searchString))
-		)
+			org.score.included || org.score.distance < 50
+		).sort((orgA, orgB) => {
+			if (orgA.score.included && orgB.score.included) return orgA.score.distance - orgB.score.distance
+			if (orgA.score.included) return -1
+			if (orgB.score.included) return 1
+			return orgA.score.distance - orgB.score.distance
+		})
 }
 /**
  * Check if given String exists in source
@@ -48,7 +58,7 @@ export async function searchOrgs(searchString) {
  * true for str is contained in source
  * false for str is not contained in source
  */
-function include(source, str){
+function include(source, str) {
 	if (typeof str !== 'string') throw new TypeError(`A string is required but received a/an ${typeof str}`)
 	if (typeof source === 'string') {
 		return source.toLowerCase().includes(str)
@@ -57,20 +67,20 @@ function include(source, str){
 	}
 	return false
 }
-function getScore(source, str){
-	const max = 50
+function getScore(source, str, limited = 50) {
 	if (typeof str !== 'string') throw new TypeError(`A string is required but received a/an ${typeof str}`)
 	if (typeof source === 'string') {
-		if (source.toLowerCase().includes(str)) return strDistance(source.toLowerCase(), str) - max
-		return strDistance(source.toLowerCase(), str)
+		if (source.toLowerCase().includes(str)) return { included: true, distance: strDistance(source.toLowerCase(), str) }
+		return { included: false, distance: strDistance(source.toLowerCase(), str) }
 	} else if (typeof source === 'object') {
-		let min = max
+		let min = limited
 		for (const val of Object.values(source)) {
-			min = getScore(val, str) < min ? getScore(val, str) : min
+			// Min = getScore(val, str).distance < min ? getScore(val, str).distance : min
+			min = Math.min(getScore(val, str, limited).distance, min)
 		}
-		return min
+		return { included: false, distance: min }
 	}
-	return max
+	return { included: false, distance: limited }
 }
 /**
  * Check name is valid.If valid returns trimmed value, if not returns null
