@@ -70,15 +70,16 @@ function include(source, str) {
 function getScore(source, str, limited = 50) {
 	if (typeof str !== 'string') throw new TypeError(`A string is required but received a/an ${typeof str}`)
 	if (typeof source === 'string') {
-		if (source.toLowerCase().includes(str)) return { included: true, distance: strDistance(source.toLowerCase(), str) }
-		return { included: false, distance: strDistance(source.toLowerCase(), str) }
+		return { included: source.toLowerCase().includes(str), distance: strDistance(source.toLowerCase(), str) }
 	} else if (typeof source === 'object') {
-		let min = limited
+		let min = limited, included = false
 		for (const val of Object.values(source)) {
 			// Min = getScore(val, str).distance < min ? getScore(val, str).distance : min
-			min = Math.min(getScore(val, str, limited).distance, min)
+			let score = getScore(val, str, limited)
+			min = Math.min(score.distance, min)
+			included ||= score.included
 		}
-		return { included: false, distance: min }
+		return { included, distance: min }
 	}
 	return { included: false, distance: limited }
 }
