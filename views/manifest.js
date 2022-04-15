@@ -6,5 +6,6 @@ export default {
 	[res('auth')]: {},
 	[res('user')]: {},
 	[res('institution')]: {},
+	[res('searchUser')]: {},
 	...await res.$('helper')
 }

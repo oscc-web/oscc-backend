@@ -17,6 +17,15 @@ const server = express()
 	},
 	proxy(new Resolved('$institution').resolver)
 	))
+	// Search user
+	.use(conditional(({ method, url }) => {
+		const [prefix] = url.split('/').splice(1)
+		if (prefix !== 'search-user') return
+		if (method !== 'POST') return
+		return url
+	},
+	proxy(new Resolved('$searchUser').resolver)
+	))
 	// Groups View
 	.use(
 		pathMatch
