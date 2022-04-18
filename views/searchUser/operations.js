@@ -2,7 +2,16 @@ import { strDistance } from 'utils/string.js'
 import User from 'lib/user.js'
 import { AppData } from 'lib/appData.js'
 const appData = new AppData('user-profile')
-
+/**
+ *
+ * @param {{
+ * userIDs: String[] | undefined,
+ * userNames: String[] | undefined,
+ * groups: String[] | undefined,
+ * institutions: String[] | undefined
+ * }} body
+ * @returns {String[]}
+ */
 export async function searchUser({ userIDs, userNames, groups, institutions }) {
 	// Mongodb query
 	let query = {}
@@ -23,14 +32,16 @@ export async function searchUser({ userIDs, userNames, groups, institutions }) {
 	if (userNames && Array.isArray(userNames) && userNames.length) {
 		existNames = true
 	}
+	let isInstitutionValid = false
 	for (let user of users) {
-		if (existInstitutions){
+		if (existInstitutions) {
 			user.institutionFilter = institutions.includes((await appData.load({ userID: user._id }))?.institution?._id)
-		} else 	user.institutionFilter = true
+			isInstitutionValid = isInstitutionValid || user.institutionFilter
+		} else user.institutionFilter = true
 	}
 	return users
 		.filter(user =>
-			user.institutionFilter
+			user.institutionFilter || !isInstitutionValid
 		).sort((userA, userB) => {
 			if (existNames) {
 				let includedA = false, includedB = false,

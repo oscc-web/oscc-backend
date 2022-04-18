@@ -9,23 +9,17 @@ import { CustomError } from 'lib/errors.js'
  */
 const server = express()
 	// Search institution
-	.use(conditional(({ method, url }) => {
-		const [prefix] = url.split('/').splice(1)
-		if (prefix !== 'search-institution') return
-		if (method !== 'POST') return
-		return url
-	},
-	proxy(new Resolved('$institution').resolver)
-	))
+	.use(
+		pathMatch
+			.POST('/search-institution', proxy(new Resolved('$institution').resolver))
+			.stripped
+	)
 	// Search user
-	.use(conditional(({ method, url }) => {
-		const [prefix] = url.split('/').splice(1)
-		if (prefix !== 'search-user') return
-		if (method !== 'POST') return
-		return url
-	},
-	proxy(new Resolved('$searchUser').resolver)
-	))
+	.use(
+		pathMatch
+			.POST('/search-user', proxy(new Resolved('$searchUser').resolver))
+			.stripped
+	)
 	// Groups View
 	.use(
 		pathMatch
