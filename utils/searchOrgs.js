@@ -1,13 +1,12 @@
-import { PROJECT_ROOT, TODO } from 'lib/env.js'
+import { PROJECT_ROOT } from 'lib/env.js'
 import { readFileSync, writeFileSync } from 'fs'
 import dbInit from './mongo.js'
 import { strDistance } from './string.js'
 const path = `${PROJECT_ROOT}/var/orgList.json`
-let orgs = JSON.parse(readFileSync(path))
 export async function loadOrgs() {
 	const db = dbInit('orgs/c')
 	Object
-		.entries(orgs)
+		.entries(JSON.parse(readFileSync(path)))
 		.map(([_id, el]) => ({ _id, ...el }))
 		.forEach(async org => {
 			await db.orgs.insert(org)
@@ -15,10 +14,11 @@ export async function loadOrgs() {
 }
 export async function dumpOrgs() {
 	const db = dbInit('orgs/r')
-	orgs = Object.fromEntries(await (await db.orgs.find())
-		.toArray()
-		.map(({ _id, ...el }) => [_id, el]))
-	writeFileSync(path, JSON.stringify(orgs))
+	writeFileSync(path, JSON.stringify(
+		Object.fromEntries(await (await db.orgs.find())
+			.toArray()
+			.map(({ _id, ...el }) => [_id, el]))
+	))
 }
 /**
  * Find institutions in orgs which contains given string and sorted by length of orgs ID
@@ -27,27 +27,30 @@ export async function dumpOrgs() {
  * @returns {Object[]}
  * Orgs including name
  */
-export async function searchOrgs(searchString) {
-	searchString = searchString.trim().toLowerCase()
-	return Object
-		.entries(orgs)
-		.map(([ID, el]) => ({
-			ID,
-			...el,
-			score: {
-				included: getScore(ID, searchString).included || getScore(el.name, searchString).included,
-				distance: Math.min(getScore(ID, searchString).distance, getScore(el.name, searchString).distance)
-			}
-		}))
-		.filter(org =>
-			org.score.included || org.score.distance < 50
-		).sort((orgA, orgB) => {
-			if (orgA.score.included && orgB.score.included) return orgA.score.distance - orgB.score.distance
-			if (orgA.score.included) return -1
-			if (orgB.score.included) return 1
-			return orgA.score.distance - orgB.score.distance
-		})
-}
+export const searchOrgs = await (async () => {
+	const db = dbInit('orgs/r')
+	return async searchString => {
+		searchString = searchString.trim().toLowerCase()
+		return (await db.orgs
+			.find({})
+			.toArray())
+			.map(org => {
+				org.score = {
+					included: getScore(org._id, searchString).included || getScore(org.name, searchString).included,
+					distance: Math.min(getScore(org._id, searchString).distance, getScore(org.name, searchString).distance)
+				}
+				return org
+			})
+			.filter(org =>
+				org.score.included || org.score.distance < 50
+			).sort((orgA, orgB) => {
+				if (orgA.score.included && orgB.score.included) return orgA.score.distance - orgB.score.distance
+				if (orgA.score.included) return -1
+				if (orgB.score.included) return 1
+				return orgA.score.distance - orgB.score.distance
+			})
+	}
+})()
 /**
  * Check if given String exists in source
  * @param {String | Object} source
@@ -102,8 +105,10 @@ export async function checkLocaleKey(name) {
 	}
 	return null
 }
-export async function findOrgsByID(_id) {
-	if (!_id) return null
-	const db = dbInit('orgs/r')
-	return (await (await db.orgs.find({ _id })).toArray())[0]
-}
+export const findOrgsByID = await (async function() {
+	const db = await dbInit('orgs/r')
+	return async _id => {
+		if (!_id) return null
+		return (await (await db.orgs.find({ _id })).toArray())[0]
+	}
+})()

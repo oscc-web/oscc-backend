@@ -49,7 +49,7 @@ const server = express()
 					(await getAvatar(userID, search))(res)
 					break
 				case 'institution':
-					(await updateInstitution(body, operatingUser, userID))(res)
+					(await updateInstitution(body, operatingUser, targetUser))(res)
 					break
 				default:
 					throw new InvalidOperationError(

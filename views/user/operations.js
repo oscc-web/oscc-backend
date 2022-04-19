@@ -77,6 +77,14 @@ export async function viewUserProfile(currentUser = new GuestUser, userID) {
 	) {
 		profile.mail = targetUser.mail
 	}
+	// Check if institution is visible
+	if (
+		!await currentUser.hasPriv(PRIV.VIEW_USER_INSTITUTION)
+		&& !profile.instVisibility
+		&& !editable.inst
+	) {
+		delete profile.institution
+	}
 	// Check if groups is visible
 	const groups = (await currentUser.viewGroups(targetUser)).map(({ id, name }) => ({ id, name }))
 	return { ...profile, editable, groups, name }
@@ -96,7 +104,7 @@ export async function viewUserProfile(currentUser = new GuestUser, userID) {
  * @throws {ChallengeFailedError|ConflictEntryError|OperationFailedError|InvalidOperationError}
  */
 export async function updateMail({ action, password, token, mail }, operatingUser, targetUser) {
-	if (operatingUser.userID !== targetUser.userID){
+	if (operatingUser.userID !== targetUser.userID && !await operatingUser.hasPriv(PRIV.ALTER_USER_INFO)) {
 		throw new PrivilegeError(
 			'update other\'s mail',
 			{ operatingUser }
@@ -158,7 +166,7 @@ export async function updateMail({ action, password, token, mail }, operatingUse
  * The handler function to send the response
  */
 export async function updateProfile({ name, ...profile }, operatingUser, targetUser) {
-	if (operatingUser.userID !== targetUser.userID || !operatingUser.hasPriv('ALTER_USER_INFO')){
+	if (operatingUser.userID !== targetUser.userID && !await operatingUser.hasPriv(PRIV.ALTER_USER_INFO)) {
 		throw new PrivilegeError(
 			'update other\'s profile',
 			{ operatingUser }
@@ -188,7 +196,7 @@ export async function updateProfile({ name, ...profile }, operatingUser, targetU
  * @throws {ChallengeFailedError|OperationFailedError}
  */
 export async function updatePassword({ oldPassword, newPassword }, operatingUser, targetUser) {
-	if (operatingUser.userID !== targetUser.userID) {
+	if (operatingUser.userID !== targetUser.userID && !await operatingUser.hasPriv(PRIV.ALTER_USER_INFO)) {
 		throw new PrivilegeError(
 			'update other\'s password',
 			{ operatingUser }
@@ -218,7 +226,7 @@ export async function updatePassword({ oldPassword, newPassword }, operatingUser
  * @throws {InvalidOperationError|EntryNotFoundError}
  */
 export async function updateInstitution({ override, ID, name }, operatingUser, targetUser) {
-	if (operatingUser.userID !== targetUser.userID){
+	if (operatingUser.userID !== targetUser.userID && !await operatingUser.hasPriv(PRIV.ALTER_USER_INFO)) {
 		throw new PrivilegeError(
 			'update other\'s institution',
 			{ operatingUser }
