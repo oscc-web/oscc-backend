@@ -24,6 +24,7 @@ export async function searchUser({ userIDs, userNames, groups, institutions }) {
 		query.groups = { $all: groups }
 	}
 	let users = await User.db.user.find(query).project({ _id: 1, name: 1, groups: 1 }).toArray()
+	if (!users.length) users = await User.db.user.find().project({ _id: 1, name: 1, groups: 1 }).toArray()
 	let existInstitutions = false,
 		existNames = false
 	if (institutions && Array.isArray(institutions) && institutions.length) {
