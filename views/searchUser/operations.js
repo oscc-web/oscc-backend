@@ -52,11 +52,11 @@ export async function searchUser({ userIDs, userNames, groups, institutions }) {
 					includedB ||= getScore(name, userB.name).included
 					if (scoreA) scoreA = Math.min(scoreA, getScore(name, userA.name).distance)
 					if (scoreB) scoreB = Math.min(scoreB, getScore(name, userB.name).distance)
-					if (includedA && includedB) return scoreA - scoreB
-					if (includedA) return -1
-					if (includedB) return 1
-					return scoreA - scoreB
 				})
+				if (includedA && includedB) return scoreA - scoreB
+				if (includedA) return -1
+				if (includedB) return 1
+				return scoreA - scoreB
 			}
 			return userA._id.length - userB._id.length
 		})
