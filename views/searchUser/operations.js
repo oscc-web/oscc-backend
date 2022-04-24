@@ -3,13 +3,14 @@ import User from 'lib/user.js'
 import { AppData } from 'lib/appData.js'
 const appData = new AppData('user-profile')
 /**
- *
+ * Query eligible users based on parameters
  * @param {{
  * userIDs: String[] | undefined,
  * userNames: String[] | undefined,
  * groups: String[] | undefined,
  * institutions: String[] | undefined
  * }} body
+ * If a condition is not given or there are no users matching the condition, the condition will not work.
  * @returns {String[]}
  */
 export async function searchUser({ userIDs, userNames, groups, institutions }) {
