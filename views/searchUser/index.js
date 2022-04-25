@@ -7,12 +7,16 @@ import express from 'express'
 import statusCode from 'lib/status.code.js'
 import Resolved from 'utils/resolved.js'
 import wrap from 'utils/wrapAsync.js'
-import { searchUser } from './operations.js'
+import { searchUserByID, searchUserByGroups, searchUserByInstitution, sortUserByName } from './operations.js'
 const server = express()
 	.use(
 		express.json(),
 		wrap(async (req, res) => {
-			res.json(await searchUser(req.body))
+			await searchUserByID(req.body, undefined)
+				.then(result => searchUserByGroups(req.body, result))
+				.then(result => searchUserByInstitution(req.body, result))
+				.then(result => sortUserByName(req.body, result))
+				.then(result => res.json(result.map(user => user._id)))
 		}, 'userSearcherRequestRouter'),
 		// Uncaught request handler
 		(req, res) => {
