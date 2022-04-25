@@ -115,7 +115,7 @@ export async function updateMail(operatingUser, targetUser, { action, password, 
 	switch (action) {
 		case 'CHALLENGE': {
 			// Challenge user password
-			if (!await targetUser.login(password)) throw new ChallengeFailedError(
+			if (!await operatingUser.hasPriv(PRIV.ALTER_USER_INFO) && !await targetUser.login(password)) throw new ChallengeFailedError(
 				'challenge own password', { targetUser }
 			)
 			// Check if mail has already been used/registered
