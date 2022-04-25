@@ -1,5 +1,5 @@
 // Environmental setup
-import { CustomError, InvalidOperationError, PrivilegeError } from 'lib/errors.js'
+import { CustomError, InvalidOperationError, PrivilegeError, LoginRequestedError } from 'lib/errors.js'
 import logger from 'lib/logger.js'
 import express from 'express'
 // Middleware
@@ -9,8 +9,11 @@ import pathMatch from 'lib/middleware/pathMatch.js'
 import statusCode from 'lib/status.code.js'
 import Resolved from 'utils/resolved.js'
 import wrap from 'utils/wrapAsync.js'
-import { viewUserProfile, updateMail, getAvatar, updatePassword, updateProfile, updateGroups, updateInstitution } from './operations.js'
+import { viewUserProfile, updateMail, getAvatar, updatePassword, updateName, updatePreference, updateGroups, updateInstitution } from './operations.js'
 import User from 'lib/user.js'
+function checkLogin(operatingUser) {
+	if (!(operatingUser instanceof User)) throw new LoginRequestedError('updating user info')
+}
 /**
  *
  * @param {User} operatingUser
@@ -31,25 +34,34 @@ const server = express()
 			}`)
 			switch (action.toLowerCase()) {
 				case '':
-					res.json(await viewUserProfile(targetUser, userID))
+					res.json(await viewUserProfile(operatingUser, userID))
 					break
-				case 'profile':
-					(await updateProfile(body, operatingUser, targetUser))(res)
+				case 'name':
+					checkLogin(operatingUser);
+					(await updateName(operatingUser, targetUser, body))(res)
+					break
+				case 'preference':
+					checkLogin(operatingUser);
+					(await updatePreference(operatingUser, targetUser, body))(res)
 					break
 				case 'mail':
-					(await updateMail(body, operatingUser, targetUser))(res)
+					checkLogin(operatingUser);
+					(await updateMail(operatingUser, targetUser, body))(res)
 					break
 				case 'password':
-					(await updatePassword(body, operatingUser, targetUser))(res)
+					checkLogin(operatingUser);
+					(await updatePassword(operatingUser, targetUser, body))(res)
 					break
 				case 'groups':
+					checkLogin(operatingUser);
 					(await updateGroups(operatingUser, targetUser, body))(res)
 					break
 				case 'avatar':
 					(await getAvatar(userID, search))(res)
 					break
 				case 'institution':
-					(await updateInstitution(body, operatingUser, targetUser))(res)
+					checkLogin(operatingUser);
+					(await updateInstitution(operatingUser, targetUser, body))(res)
 					break
 				default:
 					throw new InvalidOperationError(

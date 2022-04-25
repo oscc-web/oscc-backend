@@ -8,6 +8,7 @@ import { checkLocaleKey, findOrgsByID } from 'utils/searchOrgs.js'
 import { ConflictEntryError, EntryNotFoundError, PrivilegeError, OperationFailedError, InvalidOperationError, ChallengeFailedError, BadRequestError } from 'lib/errors.js'
 import { PRIV } from 'lib/privileges.js'
 import Group from 'lib/groups.js'
+import logger from 'lib/logger.js'
 const appData = new AppData('user-profile'),
 	appDataWithFs = new AppDataWithFs('user-profile'),
 	/**
@@ -57,7 +58,7 @@ export async function viewUserProfile(currentUser = new GuestUser, userID) {
 	if (!(targetUser instanceof User)) throw new EntryNotFoundError(
 		`User <${userID}>`, { currentUser }
 	)
-	const profile = await getRawUserProfile(userID),
+	const profile = await getRawUserProfile(userID) || {},
 		PRIV_ALTER_USER_INFO = await currentUser.hasPriv(PRIV.ALTER_USER_INFO),
 		isSameUser = currentUser.userID === userID,
 		{ name } = targetUser,
@@ -72,7 +73,7 @@ export async function viewUserProfile(currentUser = new GuestUser, userID) {
 	// Check if mail is visible
 	if (
 		await currentUser.hasPriv(PRIV.VIEW_USER_EMAIL)
-		|| profile.mailVisibility
+		|| profile.preferences?.mailVisibility
 		|| editable.mail
 	) {
 		profile.mail = targetUser.mail
@@ -80,7 +81,7 @@ export async function viewUserProfile(currentUser = new GuestUser, userID) {
 	// Check if institution is visible
 	if (
 		!await currentUser.hasPriv(PRIV.VIEW_USER_INSTITUTION)
-		&& !profile.instVisibility
+		&& !profile.preferences?.instVisibility
 		&& !editable.inst
 	) {
 		delete profile.institution
@@ -103,7 +104,7 @@ export async function viewUserProfile(currentUser = new GuestUser, userID) {
  * The handler function to send the response
  * @throws {ChallengeFailedError|ConflictEntryError|OperationFailedError|InvalidOperationError}
  */
-export async function updateMail({ action, password, token, mail }, operatingUser, targetUser) {
+export async function updateMail(operatingUser, targetUser, { action, password, token, mail }) {
 	if (operatingUser.userID !== targetUser.userID && !await operatingUser.hasPriv(PRIV.ALTER_USER_INFO)) {
 		throw new PrivilegeError(
 			'update other\'s mail',
@@ -165,23 +166,49 @@ export async function updateMail({ action, password, token, mail }, operatingUse
  * @returns {Promise<(import('express').Response) => undefined>}
  * The handler function to send the response
  */
-export async function updateProfile({ name, ...profile }, operatingUser, targetUser) {
+export async function updatePreference(operatingUser, targetUser, { preferences }) {
 	if (operatingUser.userID !== targetUser.userID && !await operatingUser.hasPriv(PRIV.ALTER_USER_INFO)) {
 		throw new PrivilegeError(
 			'update other\'s profile',
 			{ operatingUser }
 		)
 	}
-	if (name) {
+	if (await getRawUserProfile(targetUser.userID)) {
+		await appData.update({ userID: targetUser.userID }, {
+			$set: {
+				preferences: { ...await getRawPreferences(targetUser.userID), ...preferences }
+			}
+		})
+	} else {
+		await appData.store(
+			{ userID: targetUser.userID },
+			{ preferences: { ...await getRawPreferences(targetUser.userID), ...preferences } }
+		)
+	}
+	return successful
+}
+/**
+ * @param {{
+ * name: String | undefined
+ * profile: Object
+ * }} body
+ * @param {User} operatingUser
+ * The user making this request
+ * @param {User} targetUser
+ * @returns {Promise<(import('express').Response) => undefined>}
+ * The handler function to send the response
+ */
+export async function updateName(operatingUser, targetUser, { name }) {
+	if (operatingUser.userID !== targetUser.userID && !await operatingUser.hasPriv(PRIV.ALTER_USER_INFO)) {
+		throw new PrivilegeError(
+			'update other\'s name',
+			{ operatingUser }
+		)
+	}
+	if (name && typeof name === 'string' && name.trim().length) {
 		targetUser.name = name
 		await targetUser.update()
-	}
-	delete profile.institution
-	// Expects OperationFailedError thrown from appData.store
-	await appData.store({ userID: targetUser.userID },
-		{ ...await getRawUserProfile(targetUser.userID), ...profile },
-		{ replace: true }
-	)
+	} else throw new InvalidOperationError('update name', { operatingUser, name })
 	return successful
 }
 /**
@@ -195,7 +222,7 @@ export async function updateProfile({ name, ...profile }, operatingUser, targetU
  * The handler function to send the response
  * @throws {ChallengeFailedError|OperationFailedError}
  */
-export async function updatePassword({ oldPassword, newPassword }, operatingUser, targetUser) {
+export async function updatePassword(operatingUser, targetUser, { oldPassword, newPassword }) {
 	if (operatingUser.userID !== targetUser.userID && !await operatingUser.hasPriv(PRIV.ALTER_USER_INFO)) {
 		throw new PrivilegeError(
 			'update other\'s password',
@@ -225,7 +252,7 @@ export async function updatePassword({ oldPassword, newPassword }, operatingUser
  * @returns {Promise<(import('express').Response) => undefined>}
  * @throws {InvalidOperationError|EntryNotFoundError}
  */
-export async function updateInstitution({ override, ID, name }, operatingUser, targetUser) {
+export async function updateInstitution(operatingUser, targetUser, { override, ID, name }) {
 	if (operatingUser.userID !== targetUser.userID && !await operatingUser.hasPriv(PRIV.ALTER_USER_INFO)) {
 		throw new PrivilegeError(
 			'update other\'s institution',
@@ -313,10 +340,13 @@ async function challengeUpdateMailPayload(mail, token) {
  * @returns {Promise<Object>}
  */
 async function getRawUserProfile(userID) {
+	return await appData.load({ userID })
+}
+async function getRawPreferences(userID) {
 	return {
 		mailVisibility: false,
 		instVisibility: false,
-		...await appData.load({ userID }) || {}
+		...await appData.load({ userID })?.preferences || {}
 	}
 }
 /**
