@@ -13,7 +13,12 @@ const server = express()
 		express.text(),
 		wrap(async (req, res) => {
 			let searchString = req.body
-			res.json(await searchOrgs(searchString))
+			res.json((await searchOrgs(searchString)).map(({ _id, ...el }) =>
+				({
+					ID: _id,
+					...el
+				})
+			))
 		}, 'institutionRequestRouter'),
 		// Uncaught request handler
 		(req, res) => {
