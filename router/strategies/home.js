@@ -8,6 +8,18 @@ import { CustomError } from 'lib/errors.js'
  * Server instance
  */
 const server = express()
+	// Search institution
+	.use(
+		pathMatch
+			.POST('/search-institution', proxy(new Resolved('$institution').resolver))
+			.stripped
+	)
+	// Search user
+	.use(
+		pathMatch
+			.POST('/search-user', proxy(new Resolved('$searchUser').resolver))
+			.stripped
+	)
 	// Groups View
 	.use(
 		pathMatch
