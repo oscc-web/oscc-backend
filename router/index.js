@@ -48,7 +48,7 @@ const server = express()
 	// JEMU.OSCC.CC
 	.use(vhost(
 		/^JEMU\.OSCC\.(YSYX\.)?(ORG|CC|DEV|LOCAL)$/i,
-		new Deployer('jemu').server
+		new Deployer('jemu', true).server
 	))
 	// YSYX.ORG
 	.use(vhost(
