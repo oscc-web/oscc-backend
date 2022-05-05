@@ -50,6 +50,18 @@ export async function upload() {
 				await next()
 			}
 		},
+		'/deploy/jemu': {
+			duplicate: false,
+			replace: true,
+			privileges: [PRIV.DEPLOY_HOME],
+			maxSize: Infinity,
+			contentType: /^application\/tar\+gzip$/gi,
+			async hook(req, res, next) {
+				const { session: { userID }, url } = req
+				await Deployer.register('jemu', { userID, url })
+				await next()
+			}
+		},
 		'/deploy/home': {
 			duplicate: false,
 			replace: true,
