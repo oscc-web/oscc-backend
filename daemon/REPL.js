@@ -12,33 +12,28 @@ import { hash } from 'utils/crypto.js'
 import { consoleTransport } from 'lib/logger.js'
 import { Writable } from 'stream'
 import { spawn } from 'child_process'
+import { ObjectId } from 'mongodb'
 import { PROJECT_ROOT } from 'lib/env.js'
 import wrap, { setFunctionName } from 'utils/wrapAsync.js'
 import Process from './Process.js'
 import * as daemon from '../index.js'
-import { ObjectId } from 'mongodb'
+import stat from 'utils/Statistics.js'
+import { cliCommands } from './commands.js'
 // REPL Prompt
 const prompt = ['ysyx'.yellow, '>'.dim, ''].join(' ')
 // REPL Readonly Context
+const
+	db = dbInit('user/CRUD', 'session/CRUD', 'groups/CRUD', 'appData/CRUD', 'log/CRUD'),
+	objects = { PRIV, PRIV_LUT, daemon, db },
+	classes = { Session, User, GuestUser, Group, AppData, AppDataWithFs },
+	utilities = { consoleTransport, Process, ObjectId },
+	functions = { hash, wrap, setFunctionName }
+
 const context = {
-	PRIV,
-	PRIV_LUT,
-	daemon,
-	ysyx: {
-		Session,
-		User,
-		GuestUser,
-		Group,
-		AppData,
-		AppDataWithFs,
-		consoleTransport,
-		Process,
-	},
-	mongo: { ObjectId },
-	db: dbInit('user/CRUD', 'session/CRUD', 'groups/CRUD', 'appData/CRUD', 'log/CRUD'),
-	hash,
-	wrap,
-	setFunctionName
+	...objects,
+	...classes,
+	...utilities,
+	...functions,
 }
 // Create REPL instance
 const rp = repl
@@ -59,38 +54,21 @@ const rp = repl
 		rp.displayPrompt()
 		rp.resume()
 	})
-// Overload help command
-rp.defineCommand('help', {
-	action() {
-		this.clearBufferedCommand()
-		console.log(HELP_MESSAGE.yellow)
-		this.displayPrompt()
-	}
-})
 /**
  * Initialize the REPL context
  */
 function initialize(ctx){
 	Object
 		.entries(context)
-		.forEach(([name, value]) => {
-			// if (typeof value === 'object') value = Object.freeze(value)
-			if (typeof value === 'function' && value.length) Object.defineProperty(ctx, name, {
-				configurable: false,
-				enumerable: true,
-				value
-			})
-			else if (typeof value === 'function') Object.defineProperty(ctx, name, {
-				configurable: false,
-				enumerable: true,
-				get: () => (value.bind(rp)(), undefined),
-			})
-			else Object.defineProperty(ctx, name, {
+		.forEach(([name, value]) => Object.defineProperty(
+			ctx,
+			name,
+			{
 				configurable: false,
 				enumerable: true,
 				value,
-			})
-		})
+			}
+		))
 }
 initialize(rp.context)
 // Resume timer
@@ -159,6 +137,27 @@ const logProxy = new class LogProxy extends Writable {
 }
 // Redirect console.log to logProxy
 console._stdout = logProxy
+// Overload help command
+rp.defineCommand('help', {
+	action() {
+		this.clearBufferedCommand()
+		console.log(HELP_MESSAGE())
+		this.displayPrompt()
+	}
+})
+// Define stat command
+rp.defineCommand('stat', {
+	action(args) {
+		this.pause()
+		this.clearBufferedCommand()
+		stat(args)
+			.catch(console.error)
+			.then(() => {
+				this.displayPrompt()
+				this.resume()
+			})
+	}
+})
 // Initialize server control commands
 for (const cmd of ['start', 'stop', 'restart', 'run']) {
 	rp.defineCommand(cmd, {
@@ -207,24 +206,58 @@ for (const cmd of ['start', 'stop', 'restart', 'run']) {
 	})
 }
 // Help message for repl
-const HELP_MESSAGE = `
+function lineBreak(line, ps, width = Math.min(80, process.stdout.columns)) {
+	const lw = width - ps, pad = `\n${''.padEnd(ps)}`
+	if (lw <= 0) return line
+	if (line.includes('\n')) return line
+		.split('\n')
+		.map(l => lineBreak(l, ps, width))
+		.join(pad)
+	const lines = line.match(new RegExp(`.{1,${lw}}`, 'g'))
+	return lines.join(pad)
+}
+
+function makeHelp(obj) {
+	const w = Math.max(...Object.keys(obj).map(s => s.length)), j = '  '
+	return Object
+		.entries(obj)
+		.map(([key, info]) => Array.isArray(info)
+			? [key, info.join('\n')]
+			: [key, info.toString()]
+		)
+		.map(([key, info]) => [
+			'  ',
+			key.padEnd(w),
+			j,
+			lineBreak(info, 2 + w + j.length)
+		].join(''))
+		.join('\n\n')
+}
+
+const HELP_MESSAGE = () => `
 Help message for ysyx-backend-services
 --------------------------------------
 Commands:
-    .help     - Show this message
-    .start    - Show this message
-    .restart  - Show this message
-    .stop     - Show this message
 
-Classes:
-    User, Session, Group, AppData[WithFs],
-
-Objects:
-    db        - Database entry point
-	PRIV      - List of privileges as Enum<Number>
-	PRIV_LUT  - List of privileges as Enum<String>
+${makeHelp(cliCommands)}
 
 
-Functions:
-   pwd()      - Generate sha256 hashed password
+Available Classes:
+
+  ${Object.keys(classes).join(', ')}
+
+
+Available Objects:
+
+  ${Object.keys(objects).join(', ')}
+
+
+Available Utilities:
+
+  ${Object.keys(utilities).join(', ')}
+
+
+Available Functions:
+
+  ${Object.keys(functions).map(f => `${f}()`).join(', ')}
 `

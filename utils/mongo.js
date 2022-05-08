@@ -172,7 +172,9 @@ export class MongoCollection {
 let retryCount = 5
 async function onConnectionError(e) {
 	if (--retryCount <= 0) {
-		throw new Error('Reached maximum db connection count')
+		throw new Error(
+			'Unable to reconnect to mongodb, maximum db connection retry limit exceeded'
+		)
 	} else {
 		connection = await connect(config.mongo, onConnectionError)
 		setTimeout(() => {
