@@ -18,7 +18,24 @@ const flagHandler = {
 		})
 	},
 	// Post-match replacement function
-	r: (flags, str) => eval(str),
+	m: (flags, str) => {
+		if (str.startsWith('@')) {
+			const preset = {
+				ip: /(\d+\.){3}\d+/,
+				id: /(?<=User\s*<).*?(?=>)/i,
+				url: /([a-z0-9-]+\.)*([a-z]{2,3})(\/[a-z0-9-.]+)+/i
+			}[str.slice(1)]
+			if (preset instanceof RegExp) flags.map = str => str.match(preset)?.[0]
+			else throw new Error(`Preset ${str} not found`)
+		} else {
+			flags.map = eval(str)
+		}
+	},
+	// Post-match replacement function
+	M: (flags, str) => {
+		flags.mapUseFullDoc = true
+		flagHandler.m(flags, str)
+	},
 	// Sorting indexer
 	s: (flags, exp) => {
 		if (!exp) throw new SyntaxError
@@ -46,9 +63,8 @@ const $ = (a, b) => a != b
 export default async function stat(args) {
 	const
 		flags = {
-			map: doc => lo
-				.property(flags.entry.split('.'))(doc)
-				.match(regex)[0],
+			map: s => typeof s === 'string' ? s.match(regex)?.[0] : undefined,
+			mapUseFullDoc: false,
 			// Name of the database collection to stat
 			collection: 'log',
 			entry: 'message',
@@ -78,10 +94,26 @@ export default async function stat(args) {
 		db = dbInit(`${flags.collection}/R`)[flags.collection],
 		cursor = await db.find({ [flags.entry]: { $regex: regex } }),
 		stat = {}
+	// Apply flags config
+	if (!flags.mapUseFullDoc) {
+		const
+			docEntry = lo.property(flags.entry.split('.')),
+			{ map } = flags
+		flags.map = doc => map(docEntry(doc))
+	}
 	// Make indexed stat
 	await cursor
-		.map(flags.map)
-		.forEach(key => stat[key] = (stat[key] || 0) + 1)
+		.map(doc => {
+			try {
+				return flags.map(doc) || ''
+			} catch (e) {
+				console.error(e)
+				process.stdout.write(`Ignoring ${doc}\n`.yellow)
+			}
+		})
+		.forEach(key => {
+			if (key) stat[key] = (stat[key] || 0) + 1
+		})
 	// Generate statistics report
 	const
 		result = Object
@@ -92,7 +124,7 @@ export default async function stat(args) {
 	// Output the result
 	if (flags.out) {
 		// Output to file
-		console.log([
+		process.stdout.write([
 			'Writing statistics for'.yellow,
 			flags.collection.cyan,
 			'->'.yellow,
@@ -111,17 +143,21 @@ export default async function stat(args) {
 		)
 	} else {
 		// Output to console
-		console.log([
-			'Printing statistics for'.yellow,
+		process.stdout.write([
+			'Statistics for'.yellow,
 			flags.collection.blue.underline,
 			'->'.yellow,
 			flags.entry.blue.underline
 		].join(' '))
-		console.log()
-		result.forEach(([count, key]) => console.log([
-			count.toString().padStart(padLength + 1, ' ').yellow,
-			key.green
-		].join(' │ '.dim)))
-		console.log()
+		process.stdout.write('\n\n')
+		process.stdout.write(
+			result
+				.map(([count, key]) => [
+					count.toString().padStart(padLength + 1, ' ').yellow,
+					key.green
+				].join(' │ '.dim))
+				.join('\n')
+		)
+		process.stdout.write('\n\n')
 	}
 }

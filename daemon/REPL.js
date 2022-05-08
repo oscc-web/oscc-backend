@@ -17,7 +17,7 @@ import { PROJECT_ROOT } from 'lib/env.js'
 import wrap, { setFunctionName } from 'utils/wrapAsync.js'
 import Process from './Process.js'
 import * as daemon from '../index.js'
-import stat from 'utils/Statistics.js'
+import stat from 'utils/statistics.js'
 import { cliCommands } from './commands.js'
 // REPL Prompt
 const prompt = ['ysyx'.yellow, '>'.dim, ''].join(' ')

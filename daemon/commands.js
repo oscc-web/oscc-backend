@@ -37,12 +37,21 @@ export const cliCommands = {
 	 */
 	stat: [
 		'Create statistics report for given filter',
+		'',
 		'Usage: .stat [flags] <RegExp> [flags]',
+		'',
 		'Available flags:',
+		'',
 		'i - Regexp case insensitive match',
+		'',
 		'e - Specify a collection-entry pair to match',
-		'    e.g. "-e user._id"',
+		'    e.g. -e user._id',
+		'',
 		'o - Output to file, must provide a valid path following the flag',
-		'    e.g. "-o date/stat.csv"',
+		'    e.g. -o date/stat.csv',
+		'',
+		'm - Define post-search map function',
+		'    e.g. -m log=>log.message.match(/hello/i)?.[0]',
+		'    or   -m @ip',
 	],
 }
