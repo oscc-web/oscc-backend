@@ -82,7 +82,6 @@ export default async function stat(args) {
 	await cursor
 		.map(flags.map)
 		.forEach(key => stat[key] = (stat[key] || 0) + 1)
-	console.log(flags)
 	// Generate statistics report
 	const
 		result = Object
