@@ -50,6 +50,12 @@ const server = express()
 		/^JEMU\.OSCC\.(YSYX\.)?(ORG|CC|DEV|LOCAL)$/i,
 		new Deployer('jemu', true).server
 	))
+	// eslint-disable-next-line capitalized-comments
+	// iEDA.OSCC.CC
+	.use(vhost(
+		/^iEDA\.OSCC\.(YSYX\.)?(ORG|CC|DEV|LOCAL)$/i,
+		new Deployer('iEDA-docs', true).server
+	))
 	// YSYX.ORG
 	.use(vhost(
 		$``,
