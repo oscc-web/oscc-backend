@@ -26,8 +26,8 @@ export async function userID(user, idList) {
 			})
 		)
 	logger.debug(
-		`Matching ${user} with idList ${JSON.stringify(idList)}` +
-		`[result: ${result}]`
+		`Matching ${user} with idList ${JSON.stringify(idList)}`
+		+ `[result: ${result}]`
 	)
 	return Math.max(0, ...result)
 }
@@ -56,8 +56,8 @@ export async function name(user, nameList = null) {
 			})
 		})
 	logger.debug(
-		`Matching ${user} with nameList ${JSON.stringify(nameList)}` +
-		`[result: ${result}]`
+		`Matching ${user} with nameList ${JSON.stringify(nameList)}`
+		+ `[result: ${result}]`
 	)
 	return Math.max(0, ...result)
 }
