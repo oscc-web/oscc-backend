@@ -8,6 +8,7 @@ import { AppDataWithFs } from 'lib/appDataWithFs.js'
 import { PRIV, PRIV_LUT } from 'lib/privileges.js'
 import dbInit from 'utils/mongo.js'
 import { hash } from 'utils/crypto.js'
+import { strDistance } from 'utils/string.js'
 // import { sendMail } from '../modules/mailer/lib.js'
 import { consoleTransport } from 'lib/logger.js'
 import { Writable } from 'stream'
@@ -27,7 +28,7 @@ const
 	objects = { PRIV, PRIV_LUT, daemon, db },
 	classes = { Session, User, GuestUser, Group, AppData, AppDataWithFs },
 	utilities = { consoleTransport, Process, ObjectId },
-	functions = { hash, wrap, setFunctionName }
+	functions = { hash, wrap, setFunctionName, strDistance }
 
 const context = {
 	...objects,

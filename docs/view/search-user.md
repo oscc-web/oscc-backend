@@ -11,13 +11,13 @@ List may contain users who meet the query criteria.
 ```js
 // If a condition is not given or there are no users matching the condition, the condition will not work.
 request = {
-    // to select users whose ID is in userIDs
+    // select users whose ID is in userIDs
     userIDs: String[],
-    // to sort users with 
+    // sort users with given names
     userNames: String[],
-    // to select users whose group contains group
+    // select users whose group contains group
     groups: String[],
-    // to select users whose institution is in institutions
+    // select users whose institution is in institutions
     institutions: String[],
 }
 response = [...{

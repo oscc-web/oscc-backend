@@ -13,32 +13,62 @@ export const sl = (segments, ...args) => segments
 	.split('\n')
 	.map(str => str.replace(/^\s*\|\s*/, ''))
 	.join(' ')
-
-export function strDistance(a, b) {
-	if (a.length == 0) return b.length
-	if (b.length == 0) return a.length
-	var matrix = []
-	// Increment along the first column of each row
-	var i
-	for (i = 0; i <= b.length; i++) {
-		matrix[i] = [i]
-	}
-	// Increment each column in the first row
-	var j
-	for (j = 0; j <= a.length; j++) {
-		matrix[0][j] = j
-	}
-	// Fill in the rest of the matrix
-	for (i = 1; i <= b.length; i++) {
-		for (j = 1; j <= a.length; j++) {
-			if (b.charAt(i - 1) == a.charAt(j - 1)) {
-				matrix[i][j] = matrix[i - 1][j - 1]
-			} else {
-				matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, // Substitution
-					Math.min(matrix[i][j - 1] + 1, // Insertion
-						matrix[i - 1][j] + 1)) // Deletion
-			}
-		}
-	}
-	return matrix[b.length][a.length]
+/**
+ * Compute the distance of two strings
+ * @param {*} a string to be compared
+ * @param {*} b string to be compared
+ * @param {{
+ * 	normalize: number,
+ * 	REPLACE: number,
+ * 	INSERT: number,
+ * 	DELETE: number,
+ * 	CASE: number,
+ * }} parameters
+ * all operations are considered to be posed on string 'b'
+ * @returns
+ */
+export function strDistance(a, b, { normalize = 0, ...costs } = {}) {
+	if (a.length == 0 || b.length == 0) return normalize
+		? Math.min(normalize, (a || b).length)
+		: (a || b).length
+	// Initialize dp matrix
+	const
+		{ REPLACE = 1, INSERT = 1, DELETE = 1, CASE = 1 } = costs,
+		matrix = [
+			new Array(b.length + 1)
+				.fill(0)
+				.map((_, j) => j && j * DELETE),
+			...new Array(a.length)
+				.fill(null)
+				// Initialize first row and first col with row/col number
+				.map((_, i) => [
+					i + 1,
+					...new Array(b.length).fill(Infinity)
+				])
+		];
+	// Dynamic programming computation
+	[...a].forEach((charA, _i) => {
+		[...b].forEach((charB, _j) => {
+			// Offset i, j
+			const [i, j] = [_i + 1, _j + 1]
+			// Get current optimal solution, update editing distance
+			matrix[i][j] = charB === charA
+				? matrix[i - 1][j - 1]
+				: Math.min(
+					// Change case
+					charA.toLowerCase() === charB.toLowerCase()
+						? matrix[i - 1][j - 1] + CASE
+						: Infinity,
+					// Replacement
+					matrix[i - 1][j - 1] + REPLACE,
+					// Deletion from 'b'
+					matrix[i][j - 1] + DELETE,
+					// Insertion into 'b'
+					matrix[i - 1][j] + INSERT
+				)
+		})
+	})
+	return normalize
+		? Math.min(normalize, matrix[a.length][b.length])
+		: matrix[a.length][b.length]
 }
