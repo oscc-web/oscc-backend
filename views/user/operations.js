@@ -1,5 +1,4 @@
 import User, { GuestUser } from 'lib/user.js'
-import { AppData } from 'lib/appData.js'
 import { AppDataWithFs } from 'lib/appDataWithFs.js'
 import { seed } from 'utils/crypto.js'
 import { sendMail } from '../../modules/mailer/lib.js'
@@ -9,7 +8,7 @@ import { ConflictEntryError, EntryNotFoundError, PrivilegeError, OperationFailed
 import { PRIV } from 'lib/privileges.js'
 import Group from 'lib/groups.js'
 import logger from 'lib/logger.js'
-const appData = new AppData('user-profile'),
+const
 	appDataWithFs = new AppDataWithFs('user-profile'),
 	/**
 	 * The default successful response handler
@@ -125,7 +124,7 @@ export async function updateMail(operatingUser, targetUser, { action, password, 
 			)
 			// Generate one-time token for mail validation
 			const token = seed(6)
-			let { acknowledged } = await appData.store({ mail, action: 'validate-mail' }, { token }, { replace: true })
+			let { acknowledged } = await appDataWithFs.store({ mail, action: 'validate-mail' }, { token }, { replace: true })
 			if (acknowledged) {
 				const { userID, name } = targetUser,
 					link = `/actions/reset-mail/${userID}?token=${token}&mail=${Buffer.from(mail).toString('base64')}&userID=`
@@ -148,7 +147,7 @@ export async function updateMail(operatingUser, targetUser, { action, password, 
 				`update mail from ${targetUser.mail} to ${mail}`, { targetUser }
 			)
 			// Remove challenge record
-			await appData.delete({ mail, action: 'validate-mail' })
+			await appDataWithFs.delete({ mail, action: 'validate-mail' })
 			return successful
 		}
 		default:
@@ -174,13 +173,13 @@ export async function updatePreference(operatingUser, targetUser, { preferences 
 		)
 	}
 	if (await getRawUserProfile(targetUser.userID)) {
-		await appData.update({ userID: targetUser.userID }, {
+		await appDataWithFs.update({ userID: targetUser.userID }, {
 			$set: {
 				preferences: { ...await getRawPreferences(targetUser.userID), ...preferences }
 			}
 		})
 	} else {
-		await appData.store(
+		await appDataWithFs.store(
 			{ userID: targetUser.userID },
 			{ preferences: { ...await getRawPreferences(targetUser.userID), ...preferences } }
 		)
@@ -326,7 +325,7 @@ export async function updateGroups(operatingUser, targetUser, { add = [], sub = 
  * @throws {ChallengeFailedError}
  */
 async function challengeUpdateMailPayload(mail, token) {
-	const content = await appData.load({ mail, action: 'validate-mail' })
+	const content = await appDataWithFs.load({ mail, action: 'validate-mail' })
 	if (
 		!content || content.token !== token
 	) throw new ChallengeFailedError(
@@ -340,13 +339,13 @@ async function challengeUpdateMailPayload(mail, token) {
  * @returns {Promise<Object>}
  */
 async function getRawUserProfile(userID) {
-	return await appData.load({ userID })
+	return await appDataWithFs.load({ userID })
 }
 async function getRawPreferences(userID) {
 	return {
 		mailVisibility: false,
 		instVisibility: false,
-		...await appData.load({ userID })?.preferences || {}
+		...await appDataWithFs.load({ userID })?.preferences || {}
 	}
 }
 /**
@@ -361,7 +360,7 @@ async function updateUserInstitution(userID, institution) {
 	institution = await findOrgsByID(institution.ID)
 		? await findOrgsByID(institution.ID)
 		: institution
-	return await appData.store({ userID },
+	return await appDataWithFs.store({ userID },
 		{ ...await getRawUserProfile(userID), institution },
 		{ replace: true }
 	)
