@@ -1,4 +1,5 @@
 import express from 'express'
+import withSession from 'lib/middleware/withSession.js'
 import conditional from 'lib/middleware/conditional.js'
 import pathMatch from 'lib/middleware/pathMatch.js'
 import proxy from 'lib/middleware/proxy.js'
@@ -8,6 +9,16 @@ import { CustomError } from 'lib/errors.js'
  * Server instance
  */
 const server = express()
+	// User settings redirect
+	.use(
+		pathMatch
+			.GET(
+				'/settings',
+				withSession((req, res) => res.redirect(`/user/${req.session.userID}`))
+					.otherwise((req, res) => res.redirect('/403'))
+			)
+			.stripped
+	)
 	// Search institution
 	.use(
 		pathMatch
