@@ -17,9 +17,7 @@ import { CustomError } from 'lib/errors.js'
 import Resolved from 'utils/resolved.js'
 import { WebsocketResponse } from 'utils/wsResponse.js'
 // Server regexp composer
-const $ = ([str]) => new RegExp(`^${
-	str && `${str}\\.` || ''
-}YSYX\\.(OSCC\\.)?(ORG|CC|DEV|LOCAL)$`, 'i')
+const $ = ([str]) => new RegExp(`^${str && `${str}\\.` || ''}(OSCC\\.)?(CC|ORG|DEV|LOCAL|TEST)$`, 'i')
 // Compose the server
 const server = express()
 	// Remove express powered-by header
@@ -42,23 +40,23 @@ const server = express()
 	})
 	// OSCC.CC
 	.use(vhost(
-		/^OSCC\.(YSYX\.)?(ORG|CC|DEV|LOCAL)$/i,
+		$``,
 		new Deployer('oscc').server
 	))
 	// JEMU.OSCC.CC
 	.use(vhost(
-		/^JEMU\.OSCC\.(YSYX\.)?(ORG|CC|DEV|LOCAL)$/i,
+		$`JEMU`,
 		new Deployer('jemu', true).server
 	))
 	// eslint-disable-next-line capitalized-comments
 	// iEDA.OSCC.CC
 	.use(vhost(
-		/^iEDA\.OSCC\.(YSYX\.)?(ORG|CC|DEV|LOCAL)$/i,
+		$`iEDA`,
 		new Deployer('iEDA-docs', true).server
 	))
 	// YSYX.ORG
 	.use(vhost(
-		$``,
+		$`YSYX`,
 		// FORUM
 		pathMatch('/forum/', forum),
 		// DOCS
@@ -76,10 +74,13 @@ const server = express()
 			: new Deployer('home', true).server
 	))
 	// DOCS
-	.use(vhost($`DOCS`, ({ url }, res) => res.redirect(`http://${DOMAIN}/docs${url}`)))
+	.use(vhost(
+		$`DOCS.YSYX`,
+		({ url }, res) => res.redirect(`http://${DOMAIN}/docs${url}`)
+	))
 	// UPLOAD
 	.use(vhost(
-		$`UPLOAD`,
+		$`UPLOAD.YSYX`,
 		proxy(new Resolved('@upload', false).resolver)
 	))
 	// Uncaught request handler
