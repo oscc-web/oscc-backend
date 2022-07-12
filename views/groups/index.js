@@ -1,13 +1,9 @@
 // Imports
-import { config } from 'lib/env.js'
 import { CustomError, InvalidOperationError, PrivilegeError } from 'lib/errors.js'
 import logger from 'lib/logger.js'
 import express from 'express'
 // Middleware
-import vhost from 'lib/middleware/vhost.js'
-import proxy from 'lib/middleware/proxy.js'
 import withSession from 'lib/middleware/withSession.js'
-import pathMatch from 'lib/middleware/pathMatch.js'
 // Libraries and utilities
 import statusCode from 'lib/status.code.js'
 import Resolved from 'utils/resolved.js'
