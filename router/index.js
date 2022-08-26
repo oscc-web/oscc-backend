@@ -41,7 +41,7 @@ const server = express()
 	// OSCC.CC
 	.use(vhost(
 		$``,
-		new Deployer('oscc').server
+		new Deployer('oscc', true).server
 	))
 	// JEMU.OSCC.CC
 	.use(vhost(
