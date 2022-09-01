@@ -97,6 +97,18 @@ export async function upload() {
 				await Deployer.register('docs', { userID, url })
 				await next()
 			}
+		},
+		'/deploy/ysyx-slides': {
+			duplicate: false,
+			replace: true,
+			privileges: [PRIV.DEPLOY_DOCS],
+			maxSize: Infinity,
+			contentType: /^application\/tar\+gzip$/gi,
+			async hook(req, res, next) {
+				const { session: { userID }, url } = req
+				await Deployer.register('ysyx-slides', { userID, url })
+				await next()
+			}
 		}
 	}
 }

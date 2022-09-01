@@ -61,6 +61,8 @@ const server = express()
 		pathMatch('/forum/', forum),
 		// DOCS
 		pathMatch('/docs/', docs).stripped,
+		// DOCS
+		pathMatch('/slides/', new Deployer('ysyx-slides').server).stripped,
 		// Routing strategy
 		home,
 		// Static server can be either a static dist or vite dev server
