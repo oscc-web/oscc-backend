@@ -54,6 +54,11 @@ const server = express()
 		$`iEDA`,
 		new Deployer('iEDA-docs', true).server
 	))
+	// OSEDA.OSCC.CC
+	.use(vhost(
+		$`OSEDA`,
+		new Deployer('oseda', true).server
+	))
 	// YSYX.ORG
 	.use(vhost(
 		$`YSYX`,
