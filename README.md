@@ -1,4 +1,4 @@
-# YSYX backend services
+# OSCC backend
 
 ## Deploy
 
@@ -13,7 +13,7 @@
   ```sh
   # Generate config.js from default configs
   node . --init
-  # 
+  #
   ```
 
   + Deamonize
