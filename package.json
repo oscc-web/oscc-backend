@@ -30,8 +30,8 @@
     "winston-mongodb": "^5.0.7",
     "winston-transport": "^4.5.0"
   },
-  "name": "ysyx-backend-services",
-  "description": "YSYX backend services",
+  "name": "oscc-backend",
+  "description": "OSCC Backend",
   "version": "0.0.0",
   "main": "index.js",
   "type": "module",
@@ -47,14 +47,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/ysyx-org/backend-services.git"
+    "url": "git+ssh://git@github.com/oscc-web/oscc-backend.git"
   },
   "author": "Yuxuan Zhang",
   "license": "UNLICENSED",
   "bugs": {
-    "url": "https://github.com/ysyx-org/backend-services/issues"
+    "url": "https://github.com/oscc-web/oscc-backend/issues"
   },
-  "homepage": "https://docs.ysyx.org/private/web/backend-services",
+  "homepage": "",
   "husky": {
     "hooks": {
       "pre-commit": "lint-staged"
