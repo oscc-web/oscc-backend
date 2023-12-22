@@ -12,7 +12,7 @@
 
   ```sh
   # Generate config.js from default configs
-  node . --init
+  node . init
   #
   ```
 
