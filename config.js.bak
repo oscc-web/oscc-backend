@@ -1,0 +1,20 @@
+import { defineConfig } from './utils/conf.js'
+
+export default defineConfig({
+	domain: 'ysyx.oscc.cc',
+	port: 8000,
+	mongo: {
+		database: 'ysyx',
+		username: 'ysyx',
+		password: '***',
+	},
+	mailer: {
+		host: 'smtp.exmail.qq.com',
+		port: 465,
+		secure: true,
+		auth: {
+			user: '***',
+			pass: '***',
+		},
+	}
+})
