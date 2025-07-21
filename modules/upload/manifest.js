@@ -121,6 +121,18 @@ export async function upload() {
 				await Deployer.register('oseda', { userID, url })
 				await next()
 			}
+		},
+		'/deploy/moli': {
+			duplicate: false,
+			replace: true,
+			privileges: [PRIV.DEPLOY_HOME],
+			maxSize: Infinity,
+			contentType: /^application\/tar\+gzip$/gi,
+			async hook(req, res, next) {
+				const { session: { userID }, url } = req
+				await Deployer.register('moli', { userID, url })
+				await next()
+			}
 		}
 	}
 }

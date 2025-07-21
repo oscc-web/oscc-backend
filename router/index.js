@@ -59,6 +59,11 @@ const server = express()
 		$`OSEDA`,
 		new Deployer('oseda', true).server
 	))
+	// MOLI.OSCC.CC
+	.use(vhost(
+		$`MOLI`,
+		new Deployer('moli', true).server
+	))
 	// YSYX.ORG
 	.use(vhost(
 		$`YSYX`,
