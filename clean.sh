@@ -1,7 +1,7 @@
 #!/bin/bash
 
-UPLOAD_DIR="./var/upload"
-DEPLOY_DIR="./var/deploy"
+UPLOAD_DIR="/home/server/oscc-backend/var/upload"
+DEPLOY_DIR="/home/server/oscc-backend/var/deploy"
 
 if [ ! -d "$UPLOAD_DIR" ]; then
     echo "错误：目录 $UPLOAD_DIR 不存在"
