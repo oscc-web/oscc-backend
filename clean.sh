@@ -4,34 +4,34 @@ UPLOAD_DIR="/home/server/oscc-backend/var/upload"
 DEPLOY_DIR="/home/server/oscc-backend/var/deploy"
 
 if [ ! -d "$UPLOAD_DIR" ]; then
-    echo "错误：目录 $UPLOAD_DIR 不存在"
+    echo "Error: Directory $UPLOAD_DIR doesn't exist"
     exit 1
 fi
 
 if [ ! -d "$DEPLOY_DIR" ]; then
-    echo "错误：目录 $DEPLOY_DIR 不存在"
+    echo "Error: Directory $DEPLOY_DIR doesn't exist"
     exit 1
 fi
 
-echo "正在扫描upload目录..."
+echo "Scanning upload directory..."
 upload_basenames=()
 while IFS= read -r -d '' file; do
     if [ -f "$file" ]; then
         filename=$(basename "$file")
         basename="${filename%.*}"
         upload_basenames+=("$basename")
-        echo "找到文件: $filename (基础名: $basename)"
+        echo "Found file: $filename (basename: $basename)"
     fi
 done < <(find "$UPLOAD_DIR" -maxdepth 1 -type f -print0 2>/dev/null)
 
-echo "在upload目录中找到 ${#upload_basenames[@]} 个文件"
+echo "Found ${#upload_basenames[@]} files in the upload directory"
 
 declare -A upload_basename_map
 for basename in "${upload_basenames[@]}"; do
     upload_basename_map["$basename"]=1
 done
 
-echo "开始清理deploy目录..."
+echo "Start cleaning up the deploy directory..."
 deleted_count=0
 while IFS= read -r -d '' item; do
     if [ "$item" = "$DEPLOY_DIR" ]; then
@@ -42,17 +42,17 @@ while IFS= read -r -d '' item; do
 
     if [ -z "${upload_basename_map[$item_name]}" ]; then
         if [ -f "$item" ]; then
-            echo "删除文件: $item_name"
+            echo "Delete file: $item_name"
             rm -f -- "$item"
             ((deleted_count++))
         elif [ -d "$item" ]; then
-            echo "删除目录: $item_name"
+            echo "Delete dirs: $item_name"
             rm -rf -- "$item"
             ((deleted_count++))
         fi
     else
-        echo "保留: $item_name"
+        echo "Reserve: $item_name"
     fi
 done < <(find "$DEPLOY_DIR" -maxdepth 1 -print0 2>/dev/null)
 
-echo "清理完成。共删除了 $deleted_count 个项目"
+echo "Cleanup complete. $deleted_count items deleted"
