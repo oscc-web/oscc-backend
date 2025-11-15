@@ -1,5 +1,7 @@
 #!/bin/bash
 
+date
+
 UPLOAD_DIR="/home/server/oscc-backend/var/upload"
 DEPLOY_DIR="/home/server/oscc-backend/var/deploy"
 
@@ -55,4 +57,4 @@ while IFS= read -r -d '' item; do
     fi
 done < <(find "$DEPLOY_DIR" -maxdepth 1 -print0 2>/dev/null)
 
-echo "Cleanup complete. $deleted_count items deleted"
+echo -e "Cleanup complete. $deleted_count items deleted\n"
